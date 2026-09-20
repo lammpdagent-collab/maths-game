@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>乘法獵人 Multiplication Hunter - Retro Slot Edition</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PixiJS v7 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Retro Pixel Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=Noto+Sans+TC:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+
+        html, body {
+            height: 100%;
+            height: 100dvh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Press Start 2P', 'Noto Sans TC', sans-serif;
+            background-color: #030706;
+            color: #38bdf8;
+            user-select: none;
+        }
+
+        /* Pixel Boxes */
+        .pixel-box {
+            background-color: #0c1410;
+            border: 3px solid #1c2e26;
+            box-shadow: 
+                -3px 0 0 0 #000,
+                3px 0 0 0 #000,
+                0 -3px 0 0 #000,
+                0 3px 0 0 #000,
+                inset -3px -3px 0 0 #070d0a,
+                inset 3px 3px 0 0 #233a30;
+        }
+
+        .pixel-box-gold {
+            background-color: #171206;
+            border: 3px solid #b45309;
+            box-shadow: 
+                -3px 0 0 0 #000,
+                3px 0 0 0 #000,
+                0 -3px 0 0 #000,
+                0 3px 0 0 #000,
+                inset -3px -3px 0 0 #0b0702,
+                inset 3px 3px 0 0 #f59e0b;
+        }
+
+        .pixel-box-green {
+            background-color: #051810;
+            border: 3px solid #047857;
+            box-shadow: 
+                -3px 0 0 0 #000,
+                3px 0 0 0 #000,
+                0 -3px 0 0 #000,
+                0 3px 0 0 #000,
+                inset -3px -3px 0 0 #020c08,
+                inset 3px 3px 0 0 #10b981;
+        }
+
+        /* Slot Machine Drum Containers */
+        .roller-container {
+            position: relative;
+            overflow: hidden;
+            cursor: grab;
+            touch-action: none;
+        }
+        .roller-container:active {
+            cursor: grabbing;
+        }
+
+        /* Drum Pointers */
+        .vertical-pointer {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            transform: translateY(-50%);
+            height: 48px;
+            pointer-events: none;
+            border-top: 3px solid #f59e0b;
+            border-bottom: 3px solid #f59e0b;
+            background: rgba(245, 158, 11, 0.18);
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+            z-index: 10;
+        }
+
+        .vertical-pointer-green {
+            border-top-color: #10b981;
+            border-bottom-color: #10b981;
+            background: rgba(16, 185, 129, 0.18);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+        }
+
+        .horizontal-pointer {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            transform: translateX(-50%);
+            width: 56px;
+            pointer-events: none;
+            border-left: 3px solid #eab308;
+            border-right: 3px solid #eab308;
+            background: rgba(234, 179, 8, 0.22);
+            box-shadow: 0 0 10px rgba(234, 179, 8, 0.4);
+            z-index: 10;
+        }
+
+        .roller-track {
+            position: absolute;
+            top: 0;
+            left: 0;
+            will-change: transform;
+        }
+
+        .roller-track-horizontal {
+            display: flex;
+            flex-direction: row;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            will-change: transform;
+        }
+
+        .roller-item {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            user-select: none;
+            will-change: transform, opacity;
+        }
+
+        /* Action Buttons */
+        .btn-action-hand {
+            background: linear-gradient(180deg, #ca8a04 0%, #854d0e 100%);
+            color: #fef08a;
+            border: 3px solid #fde047;
+            box-shadow: inset -2px -2px 0 0 #451a03, inset 2px 2px 0 0 #fef9c3, 0 4px 0 0 #000;
+            transition: transform 0.05s ease, box-shadow 0.05s ease;
+        }
+        .btn-action-hand:active {
+            transform: translateY(2px);
+            box-shadow: inset -1px -1px 0 0 #451a03, inset 1px 1px 0 0 #fef9c3, 0 1px 0 0 #000;
+        }
+
+        .btn-action-shoot {
+            background: linear-gradient(180deg, #dc2626 0%, #991b1b 100%);
+            color: #fef2f2;
+            border: 3px solid #fca5a5;
+            box-shadow: inset -2px -2px 0 0 #450a0a, inset 2px 2px 0 0 #fecaca, 0 4px 0 0 #000;
+            transition: transform 0.05s ease, box-shadow 0.05s ease;
+        }
+        .btn-action-shoot:active {
+            transform: translateY(2px);
+            box-shadow: inset -1px -1px 0 0 #450a0a, inset 1px 1px 0 0 #fecaca, 0 1px 0 0 #000;
+        }
+
+        /* CRT Overlay */
+        .crt-overlay {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body class="h-full w-full flex flex-col justify-between p-1.5 sm:p-3 max-w-7xl mx-auto">
+
+    <!-- Game Header / HUD Bar -->
+    <header class="w-full pixel-box flex items-center justify-between px-3 py-1.5 shrink-0 z-10 gap-2">
+        <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-400 text-base sm:text-lg shrink-0">
+                <i class="fa-solid fa-crosshairs"></i>
+            </div>
+            <div>
+                <h1 class="text-xs sm:text-base font-black tracking-wider text-amber-400 uppercase leading-none">
+                    乘法獵人 <span class="hidden sm:inline text-[10px] text-emerald-400 font-normal">360° SLOT EDITION</span>
+                </h1>
+                <p class="text-[10px] sm:text-xs text-emerald-300 font-sans mt-0.5 truncate max-w-[180px] sm:max-w-xs md:max-w-md" id="target-description">等待獵物登場...</p>
+            </div>
+        </div>
+
+        <!-- HUD Stats -->
+        <div class="flex items-center gap-2 sm:gap-4 text-xs shrink-0">
+            <div class="flex items-center gap-1.5 bg-black/60 px-2 py-1 border border-emerald-900">
+                <span class="text-[9px] text-slate-400">HP:</span>
+                <div id="lives-container" class="flex gap-1 text-red-500 text-xs">
+                    <i class="fa-solid fa-heart"></i>
+                    <i class="fa-solid fa-heart"></i>
+                    <i class="fa-solid fa-heart"></i>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div class="text-center hidden xs:block">
+                    <div class="text-[8px] text-slate-400 uppercase">COMBO</div>
+                    <div id="combo-count" class="text-amber-400 text-xs sm:text-sm font-bold">0</div>
+                </div>
+                <div class="text-center bg-black/60 px-2.5 py-1 border border-emerald-500/40">
+                    <div class="text-[8px] text-emerald-400 uppercase">SCORE</div>
+                    <div id="score-count" class="text-emerald-300 text-xs sm:text-sm font-bold">0000</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Section (Optimized for iPad Landscape & Flex Scaling) -->
+    <main class="w-full flex-1 min-h-0 my-1.5 sm:my-2 flex items-center justify-center gap-1.5 sm:gap-3">
+        
+        <!-- Left: Tens Drum Roller (1-9 Infinite Loop) -->
+        <div class="w-16 sm:w-24 md:w-28 h-full pixel-box-gold p-1.5 flex flex-col justify-between items-center select-none shrink-0">
+            <div class="text-center w-full border-b border-amber-900/60 pb-1 shrink-0">
+                <h2 class="text-xs sm:text-base font-black text-amber-400 uppercase tracking-wider">十位</h2>
+            </div>
+            
+            <!-- Vertical Slot Roller for Tens -->
+            <div id="tens-roller-container" class="roller-container w-full flex-1 bg-black/80 rounded border border-amber-800/80 my-1">
+                <div class="vertical-pointer flex justify-between items-center px-0.5">
+                    <span class="text-amber-400 text-[10px]">▶</span>
+                    <span class="text-amber-400 text-[10px]">◀</span>
+                </div>
+                <div id="tens-roller-track" class="roller-track w-full"></div>
+            </div>
+        </div>
+
+        <!-- Center PixiJS Canvas Container -->
+        <div id="canvas-wrapper" class="flex-1 h-full relative bg-black border-2 sm:border-4 border-slate-800 shadow-2xl flex items-center justify-center min-w-0 overflow-hidden">
+            
+            <div id="canvas-container" class="w-full h-full flex items-center justify-center"></div>
+
+            <!-- CRT Scanlines Effect Overlay -->
+            <div class="absolute inset-0 crt-overlay"></div>
+
+            <!-- Start Overlay -->
+            <div id="start-overlay" class="absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 sm:p-6 text-center z-20">
+                <div class="w-12 h-12 sm:w-16 sm:h-16 bg-amber-500/20 border-2 sm:border-4 border-amber-400 flex items-center justify-center text-amber-400 text-2xl sm:text-3xl mb-3 animate-bounce">
+                    <i class="fa-solid fa-crosshairs"></i>
+                </div>
+                <h2 class="text-sm sm:text-lg font-black text-amber-300 mb-2">暗黑叢林 360°滾筒狩獵</h2>
+                <p class="text-emerald-300 text-[11px] sm:text-xs font-sans leading-relaxed max-w-md mb-4 sm:mb-6">
+                    • <span class="text-yellow-400 font-bold">蚊子 (1-9)</span>：滑動下方橫向滾筒，按下左下<span class="text-yellow-300 font-bold">【拍打】</span>！<br>
+                    • <span class="text-emerald-400 font-bold">野獸 (10-99)</span>：上下滑動兩側滾筒設定<span class="text-amber-400 font-bold">十位</span>與<span class="text-emerald-400 font-bold">個位</span>，按下右下<span class="text-red-400 font-bold">【開槍】</span>！<br>
+                    • <span class="text-cyan-300 font-bold">全新升級</span>：滾筒可 360° 無限循環滑動！
+                </p>
+                <button id="start-btn" class="px-5 py-2.5 sm:px-6 sm:py-3 bg-gradient-to-r from-amber-500 to-emerald-600 text-slate-950 font-black text-xs sm:text-sm border-2 border-amber-300 hover:scale-105 active:scale-95 transition-transform uppercase tracking-wider">
+                    START HUNT <i class="fa-solid fa-play ml-1.5"></i>
+                </button>
+            </div>
+
+            <!-- GameOver Overlay -->
+            <div id="gameover-overlay" class="absolute inset-0 bg-black/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center z-20 hidden">
+                <i class="fa-solid fa-skull text-4xl sm:text-5xl text-red-500 mb-2 animate-pulse"></i>
+                <h2 class="text-base sm:text-xl font-black text-red-500 mb-1 uppercase">GAME OVER</h2>
+                <p class="text-slate-400 text-[11px] sm:text-xs font-sans mb-3">獵人精力耗盡，被野獸與蚊子擊倒了...</p>
+                <div class="pixel-box p-3 mb-4 text-left w-56 sm:w-64 text-xs font-mono">
+                    <div class="flex justify-between py-1 border-b border-slate-800">
+                        <span class="text-slate-400">FINAL SCORE:</span>
+                        <span id="final-score" class="text-amber-400 font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between py-1">
+                        <span class="text-slate-400">MAX COMBO:</span>
+                        <span id="final-combo" class="text-emerald-400 font-bold">0</span>
+                    </div>
+                </div>
+                <button id="restart-btn" class="px-5 py-2.5 bg-red-600 text-white font-black text-xs border-2 border-red-300 hover:scale-105 active:scale-95 transition-transform uppercase">
+                    TRY AGAIN <i class="fa-solid fa-rotate-right ml-1.5"></i>
+                </button>
+            </div>
+
+            <!-- Visual Gun Preview Indicator -->
+            <div id="input-preview" class="absolute top-2 left-1/2 -translate-x-1/2 pixel-box px-3 py-1 flex items-center gap-1.5 pointer-events-none z-10 shadow-lg">
+                <span class="text-[9px] sm:text-[10px] text-slate-400 font-sans">LOADED:</span>
+                <span id="preview-tens" class="text-amber-400 font-black text-sm sm:text-base">1</span>
+                <span class="text-slate-500 text-xs">+</span>
+                <span id="preview-units" class="text-emerald-400 font-black text-sm sm:text-base">0</span>
+                <span class="text-slate-400 text-xs">=</span>
+                <span id="preview-total" class="text-white font-black text-base sm:text-lg">10</span>
+            </div>
+        </div>
+
+        <!-- Right: Units Drum Roller (0-9 Infinite Loop) -->
+        <div class="w-16 sm:w-24 md:w-28 h-full pixel-box-green p-1.5 flex flex-col justify-between items-center select-none shrink-0">
+            <div class="text-center w-full border-b border-emerald-900/60 pb-1 shrink-0">
+                <h2 class="text-xs sm:text-base font-black text-emerald-400 uppercase tracking-wider">個位</h2>
+            </div>
+            
+            <!-- Vertical Slot Roller for Units -->
+            <div id="units-roller-container" class="roller-container w-full flex-1 bg-black/80 rounded border border-emerald-800/80 my-1">
+                <div class="vertical-pointer vertical-pointer-green flex justify-between items-center px-0.5">
+                    <span class="text-emerald-400 text-[10px]">▶</span>
+                    <span class="text-emerald-400 text-[10px]">◀</span>
+                </div>
+                <div id="units-roller-track" class="roller-track w-full"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Action Bar: Hand Slap Button + Horizontal Mosquito Roller + Shoot Button -->
+    <footer class="w-full pixel-box p-1.5 sm:p-2.5 flex items-center justify-between gap-2 sm:gap-3 shrink-0">
+        
+        <!-- Bottom Left: Palm Slap Button -->
+        <button id="btn-slap-action" class="btn-action-hand shrink-0 px-3 sm:px-5 py-2 sm:py-3 rounded-lg flex items-center gap-1.5 font-black text-xs sm:text-sm tracking-wider uppercase">
+            <i class="fa-solid fa-hand text-sm sm:text-lg"></i>
+            <span>拍打</span>
+        </button>
+
+        <!-- Center: Horizontal Mosquito Roller (1-9 Infinite Loop) -->
+        <div class="flex-1 min-w-0 flex flex-col items-center">
+            <div class="text-[9px] sm:text-[10px] text-amber-300 font-sans mb-0.5 flex items-center gap-1">
+                <i class="fa-solid fa-bug text-amber-400"></i>
+                <span class="truncate">蚊子解答滾筒 (1-9)</span>
+            </div>
+            <div id="mosquito-roller-container" class="roller-container w-full h-11 sm:h-12 bg-black/90 rounded border-2 border-yellow-600/80">
+                <!-- Horizontal Pointer Frame -->
+                <div class="horizontal-pointer flex flex-col justify-between items-center py-0.5">
+                    <span class="text-yellow-400 text-[8px]">▲</span>
+                    <span class="text-yellow-400 text-[8px]">▼</span>
+                </div>
+                <!-- Horizontal Track -->
+                <div id="mosquito-roller-track" class="roller-track-horizontal"></div>
+            </div>
+        </div>
+
+        <!-- Bottom Right: Shoot Gun Button -->
+        <button id="btn-shoot-action" class="btn-action-shoot shrink-0 px-3 sm:px-5 py-2 sm:py-3 rounded-lg flex items-center gap-1.5 font-black text-xs sm:text-sm tracking-wider uppercase">
+            <i class="fa-solid fa-gun text-sm sm:text-lg"></i>
+            <span>開槍</span>
+        </button>
+
+    </footer>
+
+    <script>
+        /* Audio Synthesizer */
+        class ChiptuneAudioSynth {
+            constructor() {
+                this.ctx = null;
+                this.lastBuzz = 0;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playGunshot() {
+                this.init();
+                const now = this.ctx.currentTime;
+
+                const subOsc = this.ctx.createOscillator();
+                const subGain = this.ctx.createGain();
+                subOsc.type = 'triangle';
+                subOsc.frequency.setValueAtTime(320, now);
+                subOsc.frequency.exponentialRampToValueAtTime(25, now + 0.18);
+
+                subGain.gain.setValueAtTime(1.0, now);
+                subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+
+                subOsc.connect(subGain);
+                subGain.connect(this.ctx.destination);
+                subOsc.start(now);
+                subOsc.stop(now + 0.3);
+
+                const bufferSize = this.ctx.sampleRate * 0.35;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1);
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(3500, now);
+                filter.frequency.exponentialRampToValueAtTime(150, now + 0.3);
+
+                const noiseGain = this.ctx.createGain();
+                noiseGain.gain.setValueAtTime(0.9, now);
+                noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+                noise.connect(filter);
+                filter.connect(noiseGain);
+                noiseGain.connect(this.ctx.destination);
+                noise.start(now);
+            }
+
+            playSlap() {
+                this.init();
+                const now = this.ctx.currentTime;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(450, now);
+                osc.frequency.exponentialRampToValueAtTime(90, now + 0.08);
+
+                gain.gain.setValueAtTime(0.8, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+
+                const bufferSize = this.ctx.sampleRate * 0.12;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1);
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(1200, now);
+                filter.Q.value = 1.0;
+
+                const noiseGain = this.ctx.createGain();
+                noiseGain.gain.setValueAtTime(0.7, now);
+                noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+                noise.connect(filter);
+                filter.connect(noiseGain);
+                noiseGain.connect(this.ctx.destination);
+                noise.start(now);
+            }
+
+            playBuzz() {
+                this.init();
+                const now = this.ctx.currentTime;
+                if (now - this.lastBuzz < 0.2) return;
+                this.lastBuzz = now;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(240, now);
+                osc.frequency.linearRampToValueAtTime(280, now + 0.1);
+
+                gain.gain.setValueAtTime(0.012, now);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.13);
+            }
+
+            playBite() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.setValueAtTime(110, now + 0.1);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+            }
+
+            playSuccess() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const notes = [261.63, 329.63, 392.00, 523.25];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.1, now + idx * 0.06);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.06);
+                });
+            }
+
+            playMiss() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.linearRampToValueAtTime(90, now + 0.2);
+
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+            }
+
+            playTick() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                gain.gain.setValueAtTime(0.03, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+            }
+        }
+
+        const audio = new ChiptuneAudioSynth();
+
+        /* Infinite Looping Slot Roller Engine */
+        class SlotRollerEngine {
+            constructor(containerEl, trackEl, items, isVertical = true, colorClass = 'text-amber-400', onChangeCallback = null) {
+                this.container = containerEl;
+                this.track = trackEl;
+                this.items = items; // Array e.g., [1,2,3,4,5,6,7,8,9]
+                this.isVertical = isVertical;
+                this.colorClass = colorClass;
+                this.onChange = onChangeCallback;
+
+                this.itemSize = isVertical ? 48 : 56; // Standard size per item in px
+                this.totalSize = this.items.length * this.itemSize;
+                
+                this.scrollPos = 0;
+                this.currentIndex = 0;
+                this.isDragging = false;
+                this.startPos = 0;
+                this.startScrollPos = 0;
+                this.velocity = 0;
+                this.lastPos = 0;
+                this.lastTime = 0;
+                this.animFrame = null;
+
+                this.initDOM();
+                this.bindEvents();
+            }
+
+            initDOM() {
+                this.track.innerHTML = '';
+                this.itemElements = [];
+
+                this.items.forEach((val, idx) => {
+                    const el = document.createElement('div');
+                    el.className = `roller-item ${this.colorClass}`;
+                    if (this.isVertical) {
+                        el.style.width = '100%';
+                        el.style.height = `${this.itemSize}px`;
+                        el.style.fontSize = '22px';
+                    } else {
+                        el.style.width = `${this.itemSize}px`;
+                        el.style.height = '100%';
+                        el.style.fontSize = '20px';
+                    }
+                    el.textContent = val;
+                    this.track.appendChild(el);
+                    this.itemElements.push(el);
+                });
+
+                this.snapToIndex(0, false);
+            }
+
+            bindEvents() {
+                const getCoord = (e) => this.isVertical ? 
+                    (e.touches ? e.touches[0].clientY : e.clientY) : 
+                    (e.touches ? e.touches[0].clientX : e.clientX);
+
+                const onStart = (e) => {
+                    audio.init();
+                    this.isDragging = true;
+                    this.velocity = 0;
+                    this.startPos = getCoord(e);
+                    this.lastPos = this.startPos;
+                    this.lastTime = performance.now();
+                    this.startScrollPos = this.scrollPos;
+                    if (this.animFrame) cancelAnimationFrame(this.animFrame);
+                };
+
+                const onMove = (e) => {
+                    if (!this.isDragging) return;
+                    const currentPos = getCoord(e);
+                    const delta = currentPos - this.startPos;
+                    this.scrollPos = this.startScrollPos - delta;
+
+                    const now = performance.now();
+                    const dt = now - this.lastTime;
+                    if (dt > 0) {
+                        this.velocity = (this.lastPos - currentPos) / dt;
+                    }
+                    this.lastPos = currentPos;
+                    this.lastTime = now;
+
+                    this.updateTransform();
+                };
+
+                const onEnd = () => {
+                    if (!this.isDragging) return;
+                    this.isDragging = false;
+                    this.inertiaScroll();
+                };
+
+                // Mouse & Touch events
+                this.container.addEventListener('mousedown', onStart);
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onEnd);
+
+                this.container.addEventListener('touchstart', onStart, { passive: true });
+                window.addEventListener('touchmove', onMove, { passive: true });
+                window.addEventListener('touchend', onEnd);
+            }
+
+            inertiaScroll() {
+                // Determine target snap position
+                const targetPos = Math.round(this.scrollPos / this.itemSize) * this.itemSize;
+
+                const step = () => {
+                    const diff = targetPos - this.scrollPos;
+                    if (Math.abs(diff) < 0.5) {
+                        this.scrollPos = targetPos;
+                        this.normalizeScrollPos();
+                        this.updateTransform();
+                        this.updateSelectedIndex();
+                    } else {
+                        this.scrollPos += diff * 0.25;
+                        this.updateTransform();
+                        this.animFrame = requestAnimationFrame(step);
+                    }
+                };
+                step();
+            }
+
+            normalizeScrollPos() {
+                this.scrollPos = ((this.scrollPos % this.totalSize) + this.totalSize) % this.totalSize;
+            }
+
+            snapToIndex(idx, animate = true) {
+                this.scrollPos = idx * this.itemSize;
+                this.updateTransform();
+                this.updateSelectedIndex();
+            }
+
+            updateSelectedIndex() {
+                const rawIdx = Math.round(this.scrollPos / this.itemSize);
+                const normalizedIdx = ((rawIdx % this.items.length) + this.items.length) % this.items.length;
+
+                if (this.currentIndex !== normalizedIdx) {
+                    this.currentIndex = normalizedIdx;
+                    audio.playTick();
+                    if (this.onChange) this.onChange(this.getValue());
+                }
+            }
+
+            getValue() {
+                return this.items[this.currentIndex];
+            }
+
+            updateTransform() {
+                const containerSize = this.isVertical ? this.container.clientHeight : this.container.clientWidth;
+                const centerOffset = (containerSize / 2) - (this.itemSize / 2);
+
+                // Set track offset
+                if (this.isVertical) {
+                    this.track.style.transform = `translateY(${centerOffset}px)`;
+                } else {
+                    this.track.style.transform = `translateX(${centerOffset}px)`;
+                }
+
+                const normScroll = ((this.scrollPos % this.totalSize) + this.totalSize) % this.totalSize;
+
+                // Position each item relative to centerOffset with 360° wrapping
+                this.itemElements.forEach((el, i) => {
+                    let relPos = (i * this.itemSize) - normScroll;
+
+                    // Wrap items so they always stay within [-totalSize/2, totalSize/2)
+                    while (relPos < -this.totalSize / 2) relPos += this.totalSize;
+                    while (relPos >= this.totalSize / 2) relPos -= this.totalSize;
+
+                    // Apply individual transform for infinite wrapping
+                    if (this.isVertical) {
+                        el.style.transform = `translateY(${relPos}px)`;
+                    } else {
+                        el.style.transform = `translateX(${relPos}px)`;
+                    }
+
+                    // 3D Depth Visual Effects
+                    const distFromCenter = Math.abs(relPos);
+                    const maxDist = containerSize / 2;
+                    const normDist = Math.min(1, distFromCenter / maxDist);
+
+                    const scale = Math.max(0.6, 1 - (normDist * 0.35));
+                    const opacity = Math.max(0.2, 1 - (normDist * 0.7));
+
+                    el.style.opacity = opacity.toFixed(2);
+                    el.style.transform += ` scale(${scale.toFixed(2)})`;
+                });
+
+                this.updateSelectedIndex();
+            }
+        }
+
+        const GAME_WIDTH = 960; 
+        const GAME_HEIGHT = 540;
+
+        let app;
+        let gameActive = false;
+        let score = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let lives = 3;
+
+        let tensRoller, unitsRoller, mosquitoRoller;
+        let currentTarget = null;
+
+        // Container references
+        let jungleBgGroup, bushesGroup, targetGroup, hunterGroup, fxGroup;
+        let hunterSprite, rifleMuzzlePos;
+
+        const BUSH_POSITIONS = [
+            { x: 220, y: 390 },
+            { x: 480, y: 380 },
+            { x: 740, y: 390 }
+        ];
+
+        const TARGET_TYPES = [
+            { type: 'mosquito', name: '蚊子', min: 1, max: 9, speed: 1.0 },
+            { type: 'mouse', name: '老鼠', min: 10, max: 20, speed: 1.8 },
+            { type: 'rabbit', name: '兔子', min: 21, max: 50, speed: 1.8 },
+            { type: 'fox', name: '狐狸', min: 51, max: 70, speed: 1.8 },
+            { type: 'lion', name: '獅子', min: 71, max: 99, speed: 1.8 }
+        ];
+
+        function initPixiApp() {
+            PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
+
+            const container = document.getElementById('canvas-container');
+            app = new PIXI.Application({
+                width: GAME_WIDTH,
+                height: GAME_HEIGHT,
+                backgroundColor: 0x040a07,
+                resolution: window.devicePixelRatio || 1,
+                autoDensity: true
+            });
+            container.appendChild(app.view);
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            jungleBgGroup = new PIXI.Container();
+            targetGroup = new PIXI.Container();
+            bushesGroup = new PIXI.Container();
+            hunterGroup = new PIXI.Container();
+            fxGroup = new PIXI.Container();
+
+            app.stage.addChild(jungleBgGroup);
+            app.stage.addChild(targetGroup);
+            app.stage.addChild(bushesGroup);
+            app.stage.addChild(hunterGroup);
+            app.stage.addChild(fxGroup);
+
+            drawHDJungleBg();
+            drawHDBushes();
+            drawHDHunter();
+
+            app.ticker.add(gameLoop);
+        }
+
+        function resizeCanvas() {
+            const wrapper = document.getElementById('canvas-wrapper');
+            if (!wrapper || !app) return;
+
+            const containerWidth = wrapper.clientWidth;
+            const containerHeight = wrapper.clientHeight;
+
+            // Maintain 16:9 aspect ratio scaling within wrapper bounds
+            const targetRatio = GAME_WIDTH / GAME_HEIGHT;
+            let width = containerWidth;
+            let height = containerWidth / targetRatio;
+
+            if (height > containerHeight) {
+                height = containerHeight;
+                width = containerHeight * targetRatio;
+            }
+
+            app.view.style.width = `${width}px`;
+            app.view.style.height = `${height}px`;
+
+            if (tensRoller) tensRoller.updateTransform();
+            if (unitsRoller) unitsRoller.updateTransform();
+            if (mosquitoRoller) mosquitoRoller.updateTransform();
+        }
+
+        function createPixelTexture(matrix, colorMap, pixelSize = 4) {
+            const g = new PIXI.Graphics();
+            for (let r = 0; r < matrix.length; r++) {
+                for (let c = 0; c < matrix[r].length; c++) {
+                    const colorKey = matrix[r][c];
+                    if (colorKey && colorMap[colorKey] !== undefined) {
+                        g.beginFill(colorMap[colorKey]);
+                        g.drawRect(c * pixelSize, r * pixelSize, pixelSize, pixelSize);
+                        g.endFill();
+                    }
+                }
+            }
+            return app.renderer.generateTexture(g);
+        }
+
+        function drawHDJungleBg() {
+            const bg = new PIXI.Graphics();
+            bg.beginFill(0x05130b);
+            bg.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            bg.endFill();
+
+            bg.beginFill(0xfef08a);
+            bg.drawRect(780, 40, 48, 48);
+            bg.drawRect(768, 52, 72, 24);
+            bg.endFill();
+
+            bg.beginFill(0x032111);
+            for (let x = 0; x < GAME_WIDTH; x += 32) {
+                const h = 100 + (x % 5) * 20;
+                bg.drawRect(x, GAME_HEIGHT - 160 - h, 28, h + 80);
+                bg.drawRect(x - 12, GAME_HEIGHT - 160 - h - 24, 52, 28);
+            }
+            bg.endFill();
+
+            bg.beginFill(0x0b381f);
+            bg.drawRect(0, GAME_HEIGHT - 120, GAME_WIDTH, 120);
+            bg.beginFill(0x051f11);
+            bg.drawRect(0, GAME_HEIGHT - 60, GAME_WIDTH, 60);
+            bg.endFill();
+
+            jungleBgGroup.addChild(bg);
+
+            for (let i = 0; i < 16; i++) {
+                const ff = new PIXI.Graphics();
+                ff.beginFill(0x6ee7b7);
+                ff.drawRect(0, 0, 4, 4);
+                ff.endFill();
+                ff.x = Math.random() * GAME_WIDTH;
+                ff.y = Math.random() * (GAME_HEIGHT - 180);
+                ff.userData = { baseY: ff.y, phase: Math.random() * Math.PI * 2 };
+                jungleBgGroup.addChild(ff);
+            }
+        }
+
+        function drawHDBushes() {
+            BUSH_POSITIONS.forEach((pos) => {
+                const bush = new PIXI.Container();
+                bush.x = pos.x;
+                bush.y = pos.y;
+
+                const g = new PIXI.Graphics();
+                const P = 6;
+
+                g.beginFill(0x064e26);
+                g.drawRect(-12 * P, -6 * P, 24 * P, 12 * P);
+                g.drawRect(-8 * P, -10 * P, 16 * P, 16 * P);
+                g.endFill();
+
+                g.beginFill(0x107c41);
+                g.drawRect(-9 * P, -4 * P, 18 * P, 8 * P);
+                g.drawRect(-6 * P, -8 * P, 12 * P, 12 * P);
+                g.beginFill(0x34d399);
+                g.drawRect(-3 * P, -6 * P, 6 * P, 3 * P);
+                g.endFill();
+
+                bush.addChild(g);
+                bushesGroup.addChild(bush);
+            });
+        }
+
+        function drawHDHunter() {
+            hunterSprite = new PIXI.Container();
+            hunterSprite.x = 70;
+            hunterSprite.y = GAME_HEIGHT - 90;
+
+            const g = new PIXI.Graphics();
+            const P = 4;
+
+            g.beginFill(0x1e293b);
+            g.drawRect(0, -10 * P, 12 * P, 12 * P);
+            g.beginFill(0xfbbf24);
+            g.drawRect(2 * P, -16 * P, 8 * P, 6 * P);
+            g.beginFill(0xd97706);
+            g.drawRect(0, -19 * P, 14 * P, 4 * P);
+            g.drawRect(2 * P, -22 * P, 9 * P, 3 * P);
+            g.endFill();
+
+            g.beginFill(0x475569);
+            g.drawRect(6 * P, -12 * P, 24 * P, 3 * P);
+            g.beginFill(0x78350f);
+            g.drawRect(-2 * P, -10 * P, 9 * P, 4 * P);
+            g.endFill();
+
+            rifleMuzzlePos = new PIXI.Point(30 * P, -11 * P);
+
+            hunterSprite.addChild(g);
+            hunterGroup.addChild(hunterSprite);
+        }
+
+        function getMosquitoPixelTexture() {
+            const matrix = [
+                ['.','W','W','.','.','W','W','.'],
+                ['.','.','W','E','E','W','.','.'],
+                ['.','.','B','B','B','B','.','.'],
+                ['P','P','B','R','R','B','.','.'],
+                ['.','.','B','B','B','B','.','.'],
+                ['.','L','.','L','.','L','.','.']
+            ];
+            const colors = { 'W': 0xa7f3d0, 'E': 0x6ee7b7, 'B': 0x1e293b, 'R': 0xef4444, 'P': 0x94a3b8, 'L': 0x334155 };
+            return createPixelTexture(matrix, colors, 6);
+        }
+
+        function getAnimalPixelTexture(type) {
+            let matrix, colors;
+            if (type === 'mouse') {
+                matrix = [
+                    ['.','E','.','.','E','.'],
+                    ['.','B','B','B','B','.'],
+                    ['B','W','B','B','W','B'],
+                    ['.','B','B','B','B','T']
+                ];
+                colors = { 'E': 0xf472b6, 'B': 0x94a3b8, 'W': 0xffffff, 'T': 0xf472b6 };
+            } else if (type === 'rabbit') {
+                matrix = [
+                    ['.','E','.','E','.'],
+                    ['.','E','.','E','.'],
+                    ['.','B','B','B','.'],
+                    ['B','W','R','B','.'],
+                    ['.','B','B','B','T']
+                ];
+                colors = { 'E': 0xfbcfe8, 'B': 0xe2e8f0, 'W': 0xffffff, 'R': 0xf472b6, 'T': 0xffffff };
+            } else if (type === 'fox') {
+                matrix = [
+                    ['E','.','.','.','E'],
+                    ['O','O','O','O','O'],
+                    ['O','W','B','O','W'],
+                    ['.','O','O','O','.'],
+                    ['.','O','.','T','T']
+                ];
+                colors = { 'E': 0x7c2d12, 'O': 0xf97316, 'W': 0xffffff, 'B': 0x000000, 'T': 0xffffff };
+            } else {
+                matrix = [
+                    ['M','M','M','M','M'],
+                    ['M','Y','Y','Y','M'],
+                    ['M','Y','B','Y','M'],
+                    ['.','Y','Y','Y','.'],
+                    ['.','Y','.','Y','T']
+                ];
+                colors = { 'M': 0xb45309, 'Y': 0xfde047, 'B': 0x000000, 'T': 0xb45309 };
+            }
+            return createPixelTexture(matrix, colors, 8);
+        }
+
+        function generateMathProblem(minAns, maxAns) {
+            let possibleFactors = [];
+            for (let a = 1; a <= 9; a++) {
+                for (let b = 1; b <= 9; b++) {
+                    const prod = a * b;
+                    if (prod >= minAns && prod <= maxAns) {
+                        possibleFactors.push({ a, b, prod });
+                    }
+                }
+            }
+            if (possibleFactors.length === 0) return { a: 2, b: 4, prod: 8 };
+            return possibleFactors[Math.floor(Math.random() * possibleFactors.length)];
+        }
+
+        function spawnNextTarget() {
+            if (!gameActive) return;
+
+            if (currentTarget && currentTarget.container) {
+                targetGroup.removeChild(currentTarget.container);
+                currentTarget.container.destroy({ children: true });
+                currentTarget = null;
+            }
+
+            const config = TARGET_TYPES[Math.floor(Math.random() * TARGET_TYPES.length)];
+            const math = generateMathProblem(config.min, config.max);
+
+            document.getElementById('target-description').textContent = 
+                `發現【${config.name}】！乘法解答範圍 (${config.min}-${config.max})`;
+
+            if (config.type === 'mosquito') {
+                createMosquitoTarget(config, math);
+            } else {
+                createAnimalTarget(config, math);
+            }
+        }
+
+        function createMosquitoTarget(config, math) {
+            const mosquito = new PIXI.Container();
+            mosquito.x = GAME_WIDTH / 2;
+            mosquito.y = 150;
+
+            const box = new PIXI.Graphics();
+            box.beginFill(0x0f172a, 0.95);
+            box.lineStyle(3, 0xf59e0b, 1);
+            box.drawRoundedRect(-60, -45, 120, 90, 8);
+            box.endFill();
+            mosquito.addChild(box);
+
+            const sprite = new PIXI.Sprite(getMosquitoPixelTexture());
+            sprite.anchor.set(0.5);
+            sprite.y = -18;
+            mosquito.addChild(sprite);
+
+            const mathText = new PIXI.Text(`${math.a} × ${math.b}`, {
+                fontFamily: ['Noto Sans TC', 'Press Start 2P', 'sans-serif'],
+                fontSize: 22,
+                fontWeight: '900',
+                fill: 0xfef08a,
+                stroke: 0x000000,
+                strokeThickness: 5
+            });
+            mathText.anchor.set(0.5);
+            mathText.y = 22;
+            mosquito.addChild(mathText);
+
+            const timerBar = new PIXI.Graphics();
+            mosquito.addChild(timerBar);
+
+            currentTarget = {
+                container: mosquito,
+                typeConfig: config,
+                math: math,
+                type: 'mosquito',
+                maxDuration: 420,
+                currentFrame: 0,
+                buzzAngle: 0,
+                timerBar: timerBar
+            };
+
+            targetGroup.addChild(mosquito);
+        }
+
+        function createAnimalTarget(config, math) {
+            const animal = new PIXI.Container();
+
+            const startBushIdx = Math.floor(Math.random() * BUSH_POSITIONS.length);
+            let nextBushIdx = (startBushIdx + 1 + Math.floor(Math.random() * (BUSH_POSITIONS.length - 1))) % BUSH_POSITIONS.length;
+
+            animal.x = BUSH_POSITIONS[startBushIdx].x;
+            animal.y = BUSH_POSITIONS[startBushIdx].y - 20;
+
+            const box = new PIXI.Graphics();
+            box.beginFill(0x022c22, 0.95);
+            box.lineStyle(3, 0x10b981, 1);
+            box.drawRoundedRect(-65, -50, 130, 100, 8);
+            box.endFill();
+            animal.addChild(box);
+
+            const sprite = new PIXI.Sprite(getAnimalPixelTexture(config.type));
+            sprite.anchor.set(0.5);
+            sprite.y = -20;
+            animal.addChild(sprite);
+
+            const mathText = new PIXI.Text(`${math.a} × ${math.b}`, {
+                fontFamily: ['Noto Sans TC', 'Press Start 2P', 'sans-serif'],
+                fontSize: 24,
+                fontWeight: '900',
+                fill: 0xa7f3d0,
+                stroke: 0x000000,
+                strokeThickness: 5
+            });
+            mathText.anchor.set(0.5);
+            mathText.y = 25;
+            animal.addChild(mathText);
+
+            animal.alpha = 0;
+
+            currentTarget = {
+                container: animal,
+                typeConfig: config,
+                math: math,
+                type: 'animal',
+                state: 'HIDDEN',
+                currentBush: startBushIdx,
+                nextBush: nextBushIdx,
+                hideTimer: 40,
+                moveProgress: 0,
+                moveSpeed: 0.015 * config.speed
+            };
+
+            targetGroup.addChild(animal);
+        }
+
+        function gameLoop(delta) {
+            jungleBgGroup.children.forEach(c => {
+                if (c.userData) {
+                    c.userData.phase += 0.03;
+                    c.y = c.userData.baseY + Math.sin(c.userData.phase) * 8;
+                }
+            });
+
+            if (!gameActive || !currentTarget) return;
+
+            if (currentTarget.type === 'mosquito') {
+                audio.playBuzz();
+                currentTarget.buzzAngle += 0.08;
+                currentTarget.container.x = (GAME_WIDTH / 2) + Math.sin(currentTarget.buzzAngle * 0.8) * 110;
+                currentTarget.container.y = 150 + Math.cos(currentTarget.buzzAngle * 1.2) * 35;
+
+                currentTarget.currentFrame += delta;
+                const ratio = Math.max(0, 1 - (currentTarget.currentFrame / currentTarget.maxDuration));
+
+                const tb = currentTarget.timerBar;
+                tb.clear();
+                tb.beginFill(ratio > 0.3 ? 0x10b981 : 0xef4444);
+                tb.drawRect(-50, 38, 100 * ratio, 6);
+                tb.endFill();
+
+                if (ratio <= 0) {
+                    audio.playBite();
+                    triggerPixelPopup(currentTarget.container.x, currentTarget.container.y, "被蚊子叮咬!", 0xef4444);
+                    deductLife();
+                    
+                    targetGroup.removeChild(currentTarget.container);
+                    currentTarget.container.destroy({ children: true });
+                    currentTarget = null;
+                    setTimeout(spawnNextTarget, 300);
+                }
+            } else if (currentTarget.type === 'animal') {
+                if (currentTarget.state === 'HIDDEN') {
+                    currentTarget.hideTimer -= delta;
+                    currentTarget.container.alpha = 0;
+
+                    if (currentTarget.hideTimer <= 0) {
+                        currentTarget.state = 'RUNNING';
+                        currentTarget.moveProgress = 0;
+                    }
+                } else if (currentTarget.state === 'RUNNING') {
+                    currentTarget.container.alpha = 1;
+                    currentTarget.moveProgress += currentTarget.moveSpeed * delta;
+
+                    const p1 = BUSH_POSITIONS[currentTarget.currentBush];
+                    const p2 = BUSH_POSITIONS[currentTarget.nextBush];
+
+                    currentTarget.container.x = p1.x + (p2.x - p1.x) * currentTarget.moveProgress;
+                    const arc = Math.sin(currentTarget.moveProgress * Math.PI) * 60;
+                    currentTarget.container.y = (p1.y - 20) - arc;
+
+                    if (currentTarget.moveProgress >= 1) {
+                        currentTarget.state = 'HIDDEN';
+                        currentTarget.currentBush = currentTarget.nextBush;
+                        currentTarget.nextBush = (currentTarget.currentBush + 1 + Math.floor(Math.random() * (BUSH_POSITIONS.length - 1))) % BUSH_POSITIONS.length;
+                        currentTarget.hideTimer = Math.floor(Math.random() * 30) + 30;
+                    }
+                }
+            }
+        }
+
+        function submitAnswer(userVal, actionType) {
+            if (!gameActive || !currentTarget) return;
+
+            const correctAns = currentTarget.math.prod;
+
+            if (currentTarget.type === 'mosquito') {
+                if (actionType !== 'slap') return;
+
+                audio.playSlap();
+                triggerPixelSlapFX(currentTarget.container.x, currentTarget.container.y);
+
+                if (userVal === correctAns) {
+                    audio.playSuccess();
+                    triggerPixelPopup(currentTarget.container.x, currentTarget.container.y, "拍死蚊子!", 0x34d399);
+                    addScore(100);
+                } else {
+                    audio.playBite();
+                    triggerPixelPopup(currentTarget.container.x, currentTarget.container.y, "未拍中!", 0xf87171);
+                    deductLife();
+                }
+
+                targetGroup.removeChild(currentTarget.container);
+                currentTarget.container.destroy({ children: true });
+                currentTarget = null;
+                setTimeout(spawnNextTarget, 300);
+
+            } else {
+                if (actionType !== 'shoot') return;
+
+                audio.playGunshot();
+                triggerPixelGunshotFX(currentTarget.container.x, currentTarget.container.y);
+
+                if (userVal === correctAns) {
+                    audio.playSuccess();
+                    triggerPixelPopup(currentTarget.container.x, currentTarget.container.y, "擊中獵物!", 0x34d399);
+                    addScore(250 + (currentTarget.typeConfig.min * 2));
+                } else {
+                    audio.playMiss();
+                    triggerPixelPopup(currentTarget.container.x, currentTarget.container.y, "射偏嚇走!", 0xf87171);
+                    resetCombo();
+                }
+
+                targetGroup.removeChild(currentTarget.container);
+                currentTarget.container.destroy({ children: true });
+                currentTarget = null;
+                setTimeout(spawnNextTarget, 300);
+            }
+        }
+
+        function triggerPixelGunshotFX(tx, ty) {
+            const flash = new PIXI.Graphics();
+            flash.beginFill(0xfde047);
+            flash.drawRect(hunterSprite.x + rifleMuzzlePos.x, hunterSprite.y + rifleMuzzlePos.y, 20, 20);
+            flash.endFill();
+            fxGroup.addChild(flash);
+
+            const streak = new PIXI.Graphics();
+            streak.lineStyle(4, 0xf59e0b, 1);
+            streak.moveTo(hunterSprite.x + rifleMuzzlePos.x, hunterSprite.y + rifleMuzzlePos.y);
+            streak.lineTo(tx, ty);
+            fxGroup.addChild(streak);
+
+            setTimeout(() => {
+                fxGroup.removeChild(flash);
+                fxGroup.removeChild(streak);
+            }, 90);
+        }
+
+        function triggerPixelSlapFX(x, y) {
+            const handText = new PIXI.Text("✋", { fontSize: 64 });
+            handText.anchor.set(0.5);
+            handText.x = x;
+            handText.y = y;
+            fxGroup.addChild(handText);
+
+            setTimeout(() => fxGroup.removeChild(handText), 200);
+        }
+
+        function triggerPixelPopup(x, y, text, color) {
+            const txt = new PIXI.Text(text, {
+                fontFamily: ['Noto Sans TC', 'sans-serif'],
+                fontSize: 20,
+                fontWeight: '900',
+                fill: color,
+                stroke: 0x000000,
+                strokeThickness: 4
+            });
+            txt.anchor.set(0.5);
+            txt.x = x;
+            txt.y = y - 20;
+            fxGroup.addChild(txt);
+
+            let opacity = 1;
+            const anim = () => {
+                txt.y -= 1.2;
+                opacity -= 0.03;
+                txt.alpha = opacity;
+                if (opacity > 0) {
+                    requestAnimationFrame(anim);
+                } else {
+                    fxGroup.removeChild(txt);
+                }
+            };
+            anim();
+        }
+
+        function addScore(pts) {
+            combo++;
+            if (combo > maxCombo) maxCombo = combo;
+            score += pts * combo;
+
+            document.getElementById('score-count').textContent = String(score).padStart(4, '0');
+            document.getElementById('combo-count').textContent = combo;
+        }
+
+        function resetCombo() {
+            combo = 0;
+            document.getElementById('combo-count').textContent = combo;
+        }
+
+        function deductLife() {
+            resetCombo();
+            lives--;
+            updateHeartsUI();
+
+            if (lives <= 0) {
+                endGame();
+            }
+        }
+
+        function updateHeartsUI() {
+            const container = document.getElementById('lives-container');
+            container.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                if (i < lives) {
+                    container.innerHTML += '<i class="fa-solid fa-heart"></i>';
+                } else {
+                    container.innerHTML += '<i class="fa-regular fa-heart text-slate-700"></i>';
+                }
+            }
+        }
+
+        function updatePreviewUI() {
+            if (!tensRoller || !unitsRoller) return;
+            const tensVal = tensRoller.getValue();
+            const unitsVal = unitsRoller.getValue();
+
+            document.getElementById('preview-tens').textContent = tensVal;
+            document.getElementById('preview-units').textContent = unitsVal;
+            document.getElementById('preview-total').textContent = tensVal * 10 + unitsVal;
+        }
+
+        function setupSlotRollers() {
+            // Tens Roller: 1 to 9 (Infinite 360° Loop)
+            const tensContainer = document.getElementById('tens-roller-container');
+            const tensTrack = document.getElementById('tens-roller-track');
+            tensRoller = new SlotRollerEngine(tensContainer, tensTrack, [1,2,3,4,5,6,7,8,9], true, 'text-amber-400 font-black', () => {
+                updatePreviewUI();
+            });
+
+            // Units Roller: 0 to 9 (Infinite 360° Loop)
+            const unitsContainer = document.getElementById('units-roller-container');
+            const unitsTrack = document.getElementById('units-roller-track');
+            unitsRoller = new SlotRollerEngine(unitsContainer, unitsTrack, [0,1,2,3,4,5,6,7,8,9], true, 'text-emerald-400 font-black', () => {
+                updatePreviewUI();
+            });
+
+            // Horizontal Mosquito Roller: 1 to 9 (Infinite 360° Loop with Perfect Alignment)
+            const mosqContainer = document.getElementById('mosquito-roller-container');
+            const mosqTrack = document.getElementById('mosquito-roller-track');
+            mosquitoRoller = new SlotRollerEngine(mosqContainer, mosqTrack, [1,2,3,4,5,6,7,8,9], false, 'text-yellow-400 font-black', null);
+
+            // Hand Slap Action Button
+            document.getElementById('btn-slap-action').addEventListener('click', () => {
+                audio.init();
+                const selectedMosqNum = mosquitoRoller.getValue();
+                submitAnswer(selectedMosqNum, 'slap');
+            });
+
+            // Rifle Shoot Action Button
+            document.getElementById('btn-shoot-action').addEventListener('click', () => {
+                audio.init();
+                const combined = tensRoller.getValue() * 10 + unitsRoller.getValue();
+                submitAnswer(combined, 'shoot');
+            });
+
+            updatePreviewUI();
+        }
+
+        function startGame() {
+            audio.init();
+            gameActive = true;
+            score = 0;
+            combo = 0;
+            maxCombo = 0;
+            lives = 3;
+
+            document.getElementById('score-count').textContent = '0000';
+            document.getElementById('combo-count').textContent = '0';
+            updateHeartsUI();
+
+            document.getElementById('start-overlay').classList.add('hidden');
+            document.getElementById('gameover-overlay').classList.add('hidden');
+
+            spawnNextTarget();
+        }
+
+        function endGame() {
+            gameActive = false;
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('final-combo').textContent = maxCombo;
+            document.getElementById('gameover-overlay').classList.remove('hidden');
+        }
+
+        window.addEventListener('load', () => {
+            initPixiApp();
+            setupSlotRollers();
+
+            document.getElementById('start-btn').addEventListener('click', startGame);
+            document.getElementById('restart-btn').addEventListener('click', startGame);
+        });
+    </script>
+</body>
+</html>
