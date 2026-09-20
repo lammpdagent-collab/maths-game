@@ -197,6 +197,20 @@
                 this.defaultBgmUrl = './StockTune-Sunrise Over Horizon_1789906107.mp3';
             }
 
+            // BGM 需要在 user gesture（例如開始遊戲 click）內啟動，否則會被瀏覽器 autoplay 政策擋
+            startBgm() {
+                if (this.muted || this.bgmPlaying) return;
+                if (!this.bgmAudio.src) this.bgmAudio.src = this.defaultBgmUrl;
+                this.bgmAudio.play()
+                    .then(() => { this.bgmPlaying = true; })
+                    .catch(err => console.warn('BGM play blocked:', err));
+            }
+
+            pauseBgm() {
+                this.bgmAudio.pause();
+                this.bgmPlaying = false;
+            }
+
             init() {
                 if (!this.ctx) {
                     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -475,6 +489,7 @@
         }
 
         function startLevel(lvl = 1) {
+            audio.startBgm(); // 喺 user gesture 入面啟動 BGM
             level = lvl;
             score = 0;
             moves = 0;
@@ -1295,6 +1310,11 @@
             const btnSound = document.getElementById('btn-sound');
             btnSound.addEventListener('click', () => {
                 audio.muted = !audio.muted;
+                if (audio.muted) {
+                    audio.pauseBgm();
+                } else {
+                    audio.startBgm();
+                }
                 btnSound.innerHTML = audio.muted ? 
                     '<i class="fa-solid fa-volume-xmark text-lg"></i>' : 
                     '<i class="fa-solid fa-volume-high text-lg"></i>';
