@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數字果凍消消樂 (Math Jelly Pop)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PixiJS v7 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <!-- GSAP for Smooth Animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Mochiyom+Pop+One&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Fredoka', 'Mochiyom Pop One', sans-serif;
+            background: linear-gradient(135deg, #a8edf0 0%, #fed6e3 100%);
+            touch-action: none;
+            user-select: none;
+        }
+        .cute-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            border: 4px solid #fff;
+            box-shadow: 0 10px 25px -5px rgba(255, 182, 193, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        }
+        .btn-bounce {
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+        .btn-bounce:active {
+            transform: scale(0.92);
+        }
+        /* Custom modal animation */
+        .modal-enter {
+            animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.8) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden">
+
+    <!-- Outer Container -->
+    <div class="w-full max-w-4xl flex flex-col items-center">
+        
+        <!-- Header / Control Panel -->
+        <div class="w-full cute-card rounded-3xl p-3 sm:p-4 mb-3 flex flex-wrap items-center justify-between gap-2 shadow-lg">
+            
+            <!-- Game Title & Level -->
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-pink-400 rounded-2xl flex items-center justify-center text-white text-2xl shadow-inner border-2 border-white">
+                    <i class="fa-solid font-bold">10</i>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold text-pink-600 leading-tight">數字果凍消消樂 (10x10)</h1>
+                    <!-- Mode Switcher Tabs -->
+                    <div class="flex items-center gap-1 mt-1 bg-pink-100/80 p-1 rounded-2xl border border-pink-200">
+                        <button id="mode-casual-btn" class="px-3 py-1 rounded-xl text-xs font-bold transition-all bg-pink-500 text-white shadow">
+                            <i class="fa-solid fa-mug-hot mr-1"></i>休閒模式
+                        </button>
+                        <button id="mode-speed-btn" class="px-3 py-1 rounded-xl text-xs font-bold transition-all text-pink-600 hover:bg-pink-200/50">
+                            <i class="fa-solid fa-bolt mr-1"></i>競速模式 🔥
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Score & Moves Dashboard (Fixed height & whitespace constraint) -->
+            <div class="flex items-center justify-around space-x-2 sm:space-x-3 bg-pink-50/80 px-2 sm:px-4 py-2 rounded-2xl border border-pink-200 whitespace-nowrap shrink-0">
+                <div class="text-center min-w-[60px] sm:min-w-[70px] flex flex-col items-center justify-center">
+                    <div class="text-[10px] sm:text-xs text-pink-400 uppercase font-bold leading-none mb-1">目前分數</div>
+                    <div class="h-7 flex items-center justify-center w-full">
+                        <span id="score-text" class="font-black text-pink-500 leading-none transition-all duration-150">0</span>
+                    </div>
+                </div>
+                <div class="h-8 w-0.5 bg-pink-200 shrink-0"></div>
+                <div class="text-center min-w-[55px] sm:min-w-[65px] flex flex-col items-center justify-center">
+                    <div class="text-[10px] sm:text-xs text-pink-400 uppercase font-bold leading-none mb-1">移動步數</div>
+                    <div class="h-7 flex items-center justify-center w-full">
+                        <span id="moves-text" class="font-black text-purple-500 leading-none transition-all duration-150">0</span>
+                    </div>
+                </div>
+                <div class="h-8 w-0.5 bg-pink-200 shrink-0"></div>
+                <div class="text-center min-w-[75px] sm:min-w-[95px] flex flex-col items-center justify-center">
+                    <div id="push-label" class="text-[10px] sm:text-xs text-pink-400 uppercase font-bold leading-none mb-1">推升進度</div>
+                    <div class="h-7 flex items-center justify-center w-full">
+                        <span id="push-progress-text" class="font-black text-emerald-500 leading-none transition-all duration-150">0/15</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center space-x-2">
+                <button id="btn-sound" class="btn-bounce bg-yellow-300 hover:bg-yellow-400 text-yellow-800 p-3 rounded-2xl border-2 border-white shadow-md font-bold flex items-center justify-center w-11 h-11" title="聲音開關">
+                    <i class="fa-solid fa-volume-high text-lg"></i>
+                </button>
+                <button id="btn-hint" class="btn-bounce bg-purple-400 hover:bg-purple-500 text-white px-3 py-2 rounded-2xl border-2 border-white shadow-md font-bold flex items-center space-x-1 text-sm">
+                    <i class="fa-solid fa-lightbulb"></i>
+                    <span>提示</span>
+                </button>
+                <button id="btn-restart" class="btn-bounce bg-sky-400 hover:bg-sky-500 text-white p-3 rounded-2xl border-2 border-white shadow-md font-bold flex items-center justify-center w-11 h-11" title="重新開始">
+                    <i class="fa-solid fa-rotate-right text-lg"></i>
+                </button>
+                <button id="btn-help" class="btn-bounce bg-emerald-400 hover:bg-emerald-500 text-white p-3 rounded-2xl border-2 border-white shadow-md font-bold flex items-center justify-center w-11 h-11" title="遊戲說明">
+                    <i class="fa-solid fa-question text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Game Canvas Container -->
+        <div id="canvas-container" class="w-full cute-card rounded-3xl p-2 sm:p-4 flex items-center justify-center relative overflow-hidden shadow-2xl min-h-[380px] sm:min-h-[480px]">
+            <!-- Pixi JS standard Canvas attached dynamically -->
+        </div>
+    </div>
+
+    <!-- Instructions Modal -->
+    <div id="modal-instructions" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="cute-card modal-enter rounded-3xl max-w-md w-full p-6 text-slate-700 relative">
+            <button class="btn-close-modal absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="text-center mb-4">
+                <div class="inline-block p-3 bg-pink-100 rounded-full text-pink-500 mb-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-pink-600">遊戲玩法說明</h2>
+            </div>
+            <div class="space-y-3 text-sm leading-relaxed">
+                <div class="flex items-start gap-3 bg-pink-50/60 p-3 rounded-2xl border border-pink-100">
+                    <span class="bg-pink-400 text-white w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold">1</span>
+                    <p>拖曳<b>最上方</b>的果凍方塊，可自由放置到其他欄位最頂端。</p>
+                </div>
+                <div class="flex items-start gap-3 bg-pink-50/60 p-3 rounded-2xl border border-pink-100">
+                    <span class="bg-pink-400 text-white w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold">2</span>
+                    <p>當移動後的果凍與上下左右<b>相鄰果凍相加等於 10</b>，就會開心消除！</p>
+                </div>
+                <div class="flex items-start gap-3 bg-pink-50/60 p-3 rounded-2xl border border-pink-100">
+                    <span class="bg-pink-400 text-white w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold">3</span>
+                    <p><b>休閒模式</b>：每消除 15 個果凍底部向上推升一行。<br><b>競速模式 🔥</b>：按時間倒數（初次 30 秒，每次遞減 2 秒至最快 16 秒）自動向上推升！</p>
+                </div>
+                <div class="flex items-start gap-3 bg-pink-50/60 p-3 rounded-2xl border border-pink-100">
+                    <span class="bg-pink-400 text-white w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold">4</span>
+                    <p>若果凍推升超過最上方（10 層）則遊戲結束。</p>
+                </div>
+            </div>
+            <button class="btn-close-modal w-full mt-5 bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 rounded-2xl shadow-lg border-2 border-white btn-bounce">
+                我知道了！開始玩
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="modal-gameover" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="cute-card modal-enter rounded-3xl max-w-sm w-full p-6 text-center text-slate-700">
+            <div class="text-pink-500 text-5xl mb-2 animate-bounce">
+                <i class="fa-solid fa-flag-checkered"></i>
+            </div>
+            <h2 class="text-3xl font-extrabold text-pink-600 mb-1">遊戲結束！</h2>
+            <p class="text-sm text-gray-500 mb-4">盤面已沒有可以湊成 10 的組合囉！</p>
+            
+            <div class="bg-pink-50/80 rounded-2xl p-4 border border-pink-200 mb-5 flex justify-around items-center">
+                <div>
+                    <div class="text-xs text-pink-400 uppercase font-bold">最終分數</div>
+                    <div id="final-score" class="text-2xl font-black text-pink-500">0</div>
+                </div>
+                <div class="h-8 w-0.5 bg-pink-200"></div>
+                <div>
+                    <div class="text-xs text-pink-400 uppercase font-bold">總移動步數</div>
+                    <div id="final-moves" class="text-2xl font-black text-purple-500">0</div>
+                </div>
+            </div>
+
+            <button id="btn-restart-gameover" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-2xl shadow-lg border-2 border-white btn-bounce text-lg">
+                <i class="fa-solid fa-rotate-right mr-1"></i> 再玩一次
+            </button>
+        </div>
+    </div>
+
+    <!-- Audio Synthesizer Engine (Web Audio API) -->
+    <script>
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+            }
+
+            playPop() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.1);
+                
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            }
+
+            playCombo(count = 1) {
+                if (this.muted) return;
+                this.init();
+                const baseFreq = 400 + count * 80;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(baseFreq, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, this.ctx.currentTime + 0.2);
+
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playInvalid() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(110, this.ctx.currentTime + 0.18);
+
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.18);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.18);
+            }
+
+            playVictory() {
+                if (this.muted) return;
+                this.init();
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.12);
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime + idx * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.12 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.12);
+                    osc.stop(this.ctx.currentTime + idx * 0.12 + 0.3);
+                });
+            }
+        }
+
+        const audio = new SoundEngine();
+    </script>
+
+    <!-- Main Game Mechanics & PixiJS Render Engine -->
+    <script>
+        const BLOCK_COLORS = {
+            1: { bg: 0xFFB7B2, border: 0xFF9E99, text: "#7A2E2B" }, // Pastel Red
+            2: { bg: 0xFFDAC1, border: 0xFFC09F, text: "#7C4A27" }, // Peach
+            3: { bg: 0xFFF5BA, border: 0xFFEE93, text: "#7A6818" }, // Warm Yellow
+            4: { bg: 0xE2F0CB, border: 0xC6E59B, text: "#466B1E" }, // Soft Green
+            5: { bg: 0xB5EAD7, border: 0x93DCB7, text: "#1F694B" }, // Mint Green
+            6: { bg: 0xC7CEEA, border: 0xA7B5E2, text: "#384572" }, // Periwinkle Blue
+            7: { bg: 0xE8AEB7, border: 0xD88C9A, text: "#682330" }, // Soft Rose
+            8: { bg: 0xD0F4DE, border: 0xA9ECC6, text: "#2B6946" }, // Pastel Lime
+            9: { bg: 0xFCE1E4, border: 0xF7C3C8, text: "#7A3A41" }  // Cream Pink
+        };
+
+        const COLS = 10;
+        const ROWS = 10;
+        const BLOCK_SIZE = 46;
+        const BLOCK_GAP = 6;
+
+        let app;
+        let gameStage;
+        let board = []; // 2D Array [col][row], index 0 is bottom
+        let score = 0;
+        let moves = 0;
+        let level = 1;
+        let draggedBlock = null;
+        let originalCol = -1;
+        let dragOffset = { x: 0, y: 0 };
+        let isAnimating = false;
+        let clearedBlocksCount = 0; // 追蹤消除果凍總數量
+
+        // Mode and Speed Timer variables
+        let gameMode = 'casual'; // 'casual' | 'speed'
+        let speedTimer = null;
+        let speedIntervalSec = 30;
+        let speedCountdown = 30;
+        let isGameOver = false;
+
+        // Container references
+        const canvasContainer = document.getElementById('canvas-container');
+
+        function initApp() {
+            const containerWidth = canvasContainer.clientWidth || 360;
+            const containerHeight = Math.max(400, window.innerHeight - 220);
+
+            app = new PIXI.Application({
+                width: containerWidth,
+                height: containerHeight,
+                backgroundColor: 0xFDF8F5,
+                resolution: window.devicePixelRatio || 1,
+                autoDensity: true,
+                resizeTo: canvasContainer, // 自動貼合容器大小
+                antialias: true
+            });
+
+            canvasContainer.appendChild(app.view);
+
+            // Center game container stage
+            gameStage = new PIXI.Container();
+            app.stage.addChild(gameStage);
+
+            // Setup Background Grid Graphics
+            drawBackgroundGrid();
+
+            // Setup Interaction Stage Listeners
+            app.stage.eventMode = 'static';
+            app.stage.hitArea = app.screen;
+            app.stage.on('pointermove', onDragMove);
+            app.stage.on('pointerup', onDragEnd);
+            app.stage.on('pointerupoutside', onDragEnd);
+
+            window.addEventListener('resize', updateStageScale);
+            updateStageScale();
+
+            startLevel(1);
+        }
+
+        let bgGridContainer = null;
+
+        function drawBackgroundGrid() {
+            if (bgGridContainer) {
+                gameStage.removeChild(bgGridContainer);
+                bgGridContainer.destroy({ children: true });
+            }
+
+            bgGridContainer = new PIXI.Container();
+            const gridGraphics = new PIXI.Graphics();
+
+            const startX = 15;
+            const startY = 30;
+            const totalW = COLS * (BLOCK_SIZE + BLOCK_GAP);
+            const totalH = ROWS * (BLOCK_SIZE + BLOCK_GAP);
+
+            // Board outer container background
+            gridGraphics.beginFill(0xF3E8EE, 0.6);
+            gridGraphics.drawRoundedRect(startX - 8, startY - 8, totalW + 10, totalH + 10, 18);
+            gridGraphics.endFill();
+
+            // Slot placeholders for 10x10 board
+            for (let c = 0; c < COLS; c++) {
+                for (let r = 0; r < ROWS; r++) {
+                    const pos = getCanvasPos(c, r);
+                    gridGraphics.beginFill(0xECD5E3, 0.4);
+                    gridGraphics.drawRoundedRect(pos.x, pos.y, BLOCK_SIZE, BLOCK_SIZE, 10);
+                    gridGraphics.endFill();
+                }
+            }
+
+            bgGridContainer.addChild(gridGraphics);
+            gameStage.addChildAt(bgGridContainer, 0);
+        }
+
+        function updateStageScale() {
+            if (!app || !gameStage || !canvasContainer) return;
+
+            const cWidth = canvasContainer.clientWidth;
+            const cHeight = Math.max(380, window.innerHeight - 200);
+
+            if (app.renderer) {
+                app.renderer.resize(cWidth, cHeight);
+            }
+
+            const targetW = COLS * (BLOCK_SIZE + BLOCK_GAP) + 30;
+            const targetH = ROWS * (BLOCK_SIZE + BLOCK_GAP) + 60;
+
+            const scaleX = cWidth / targetW;
+            const scaleY = cHeight / targetH;
+            // 自適應縮放，適配手機、平板與電腦螢幕
+            const scale = Math.min(scaleX, scaleY, 1.1);
+
+            gameStage.scale.set(scale);
+            gameStage.x = Math.max(0, (cWidth - targetW * scale) / 2);
+            gameStage.y = Math.max(0, (cHeight - targetH * scale) / 2);
+        }
+
+        function clearAllBlocksFromStage() {
+            if (!board) return;
+            for (let c = 0; c < board.length; c++) {
+                if (board[c]) {
+                    for (let r = 0; r < board[c].length; r++) {
+                        if (board[c][r] && board[c][r].container) {
+                            gameStage.removeChild(board[c][r].container);
+                            board[c][r].container.destroy({ children: true });
+                        }
+                    }
+                }
+            }
+            board = Array.from({ length: COLS }, () => []);
+        }
+
+        function stopSpeedTimer() {
+            if (speedTimer) {
+                clearInterval(speedTimer);
+                speedTimer = null;
+            }
+        }
+
+        function startSpeedTimer() {
+            stopSpeedTimer();
+            if (gameMode !== 'speed' || isGameOver) return;
+
+            speedTimer = setInterval(() => {
+                if (isGameOver) {
+                    stopSpeedTimer();
+                    return;
+                }
+
+                speedCountdown--;
+                updateUI();
+
+                if (speedCountdown <= 0) {
+                    onSpeedTimerTrigger();
+                }
+            }, 1000);
+        }
+
+        async function onSpeedTimerTrigger() {
+            // Push one row up from bottom
+            const success = await pushOneBottomRow();
+            if (success && !isGameOver) {
+                // Interval decreases by 2 seconds each time down to min 16s
+                speedIntervalSec = Math.max(16, speedIntervalSec - 2);
+                speedCountdown = speedIntervalSec;
+                updateUI();
+            }
+        }
+
+        function startLevel(lvl = 1) {
+            level = lvl;
+            score = 0;
+            moves = 0;
+            clearedBlocksCount = 0;
+            isGameOver = false;
+
+            stopSpeedTimer();
+
+            if (gameMode === 'speed') {
+                speedIntervalSec = 30;
+                speedCountdown = 30;
+            }
+
+            updateUI();
+            clearAllBlocksFromStage();
+
+            board = Array.from({ length: COLS }, () => []);
+
+            // Fill columns with smart solvable & balanced blocks
+            fillBoardSolvable();
+
+            if (gameMode === 'speed') {
+                startSpeedTimer();
+            }
+        }
+
+        function fillBoardSolvable() {
+            let attempts = 0;
+            let success = false;
+
+            while (!success && attempts < 15) {
+                attempts++;
+                clearAllBlocksFromStage();
+                board = Array.from({ length: COLS }, () => []);
+
+                // 1. Generate blocks without initial adjacent matches = 10
+                for (let c = 0; c < COLS; c++) {
+                    const height = 4 + Math.floor(Math.random() * 2); // 4 to 5 blocks per column initially
+                    for (let r = 0; r < height; r++) {
+                        let forbidden = new Set();
+
+                        // Avoid matching with block immediately below
+                        if (r > 0 && board[c][r - 1]) {
+                            forbidden.add(10 - board[c][r - 1].val);
+                        }
+                        // Avoid matching with block immediately to the left
+                        if (c > 0 && board[c - 1].length > r && board[c - 1][r]) {
+                            forbidden.add(10 - board[c - 1][r].val);
+                        }
+
+                        // Pick randomly from valid numbers
+                        const validNums = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter(n => !forbidden.has(n));
+                        const chosenVal = validNums[Math.floor(Math.random() * validNums.length)];
+
+                        const block = createBlock(chosenVal, c, r);
+                        board[c].push(block);
+                    }
+                }
+
+                // 2. Ensure controlled playability (at least 3-6 valid initial moves)
+                let validMoveCount = countValidMoves();
+
+                if (validMoveCount < 3) {
+                    // Inject strategic top-pair combinations to guarantee playability
+                    ensureSolvableTopMoves();
+                }
+
+                success = true;
+            }
+
+            updateStageScale();
+        }
+
+        function countValidMoves() {
+            let count = 0;
+            for (let fromCol = 0; fromCol < COLS; fromCol++) {
+                if (board[fromCol].length === 0) continue;
+                const topBlock = board[fromCol][board[fromCol].length - 1];
+
+                for (let toCol = 0; toCol < COLS; toCol++) {
+                    if (fromCol === toCol) continue;
+                    if (isValidMove(topBlock, fromCol, toCol)) {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        function ensureSolvableTopMoves() {
+            // Find top blocks and create 3-4 deliberate valid drop pairings
+            const nonEmpCols = [];
+            for (let c = 0; c < COLS; c++) {
+                if (board[c].length > 0) nonEmpCols.push(c);
+            }
+
+            if (nonEmpCols.length < 2) return;
+
+            // Pick 3 pairs to construct valid moves
+            for (let i = 0; i < 3; i++) {
+                const c1 = nonEmpCols[Math.floor(Math.random() * nonEmpCols.length)];
+                let c2 = nonEmpCols[Math.floor(Math.random() * nonEmpCols.length)];
+                if (c1 === c2) continue;
+
+                const top1 = board[c1][board[c1].length - 1];
+                const top2 = board[c2][board[c2].length - 1];
+
+                if (top1 && top2) {
+                    const targetVal = 10 - top2.val;
+                    if (targetVal >= 1 && targetVal <= 9) {
+                        // Ensure modifying top1 doesn't create an accidental match in its resting spot
+                        const below = board[c1].length > 1 ? board[c1][board[c1].length - 2].val : -1;
+                        const left = (c1 > 0 && board[c1 - 1].length >= board[c1].length) ? board[c1 - 1][board[c1].length - 1].val : -1;
+                        const right = (c1 < COLS - 1 && board[c1 + 1].length >= board[c1].length) ? board[c1 + 1][board[c1].length - 1].val : -1;
+
+                        if (targetVal + below !== 10 && targetVal + left !== 10 && targetVal + right !== 10) {
+                            top1.val = targetVal;
+                            updateBlockGraphics(top1);
+                        }
+                    }
+                }
+            }
+        }
+
+        function createBlock(val, col, row) {
+            const container = new PIXI.Container();
+            const pos = getCanvasPos(col, row);
+            container.x = pos.x;
+            container.y = pos.y;
+
+            const block = {
+                val: val,
+                col: col,
+                row: row,
+                container: container,
+                bgGraphics: new PIXI.Graphics(),
+                text: new PIXI.Text('', {
+                    fontFamily: 'Fredoka, sans-serif',
+                    fontSize: 22,
+                    fontWeight: '700',
+                    fill: '#333333'
+                })
+            };
+
+            container.addChild(block.bgGraphics);
+            container.addChild(block.text);
+
+            updateBlockGraphics(block);
+
+            // Interaction
+            container.eventMode = 'static';
+            container.cursor = 'pointer';
+            container.on('pointerdown', (e) => onDragStart(e, block));
+
+            gameStage.addChild(container);
+            return block;
+        }
+
+        function updateBlockGraphics(block) {
+            const { bg, border, text } = BLOCK_COLORS[block.val] || BLOCK_COLORS[1];
+            const g = block.bgGraphics;
+            g.clear();
+
+            // Outer Shadow / Border
+            g.beginFill(border);
+            g.drawRoundedRect(0, 3, BLOCK_SIZE, BLOCK_SIZE, 12);
+            g.endFill();
+
+            // Main Body
+            g.beginFill(bg);
+            g.drawRoundedRect(0, 0, BLOCK_SIZE, BLOCK_SIZE - 3, 12);
+            g.endFill();
+
+            // Cute Highlight Specular
+            g.beginFill(0xFFFFFF, 0.4);
+            g.drawEllipse(12, 9, 7, 4);
+            g.endFill();
+
+            // Cute Expression (Eyes)
+            g.beginFill(0x4A3E3D);
+            g.drawCircle(13, 16, 2);
+            g.drawCircle(BLOCK_SIZE - 13, 16, 2);
+            g.endFill();
+
+            // Text Label Number
+            block.text.text = block.val.toString();
+            block.text.style.fill = text;
+            block.text.style.fontSize = 22;
+            block.text.anchor.set(0.5);
+            block.text.x = BLOCK_SIZE / 2;
+            block.text.y = BLOCK_SIZE / 2 + 3;
+        }
+
+        function getCanvasPos(col, row) {
+            const startX = 15;
+            const startY = 30;
+            return {
+                x: startX + col * (BLOCK_SIZE + BLOCK_GAP),
+                y: startY + (ROWS - 1 - row) * (BLOCK_SIZE + BLOCK_GAP)
+            };
+        }
+
+        function onDragStart(event, block) {
+            if (isAnimating) return;
+
+            // Check if block is the topmost block of its column
+            const col = block.col;
+            if (board[col].length === 0 || board[col][board[col].length - 1] !== block) {
+                return;
+            }
+
+            audio.playPop();
+            draggedBlock = block;
+            originalCol = col;
+
+            // Move to top rendering layer
+            gameStage.removeChild(block.container);
+            gameStage.addChild(block.container);
+
+            const globalPos = event.data.global;
+            const stageScale = gameStage.scale.x;
+            dragOffset.x = (block.container.x * stageScale) - globalPos.x;
+            dragOffset.y = (block.container.y * stageScale) - globalPos.y;
+
+            gsap.to(block.container.scale, { x: 1.15, y: 1.15, duration: 0.15 });
+        }
+
+        function onDragMove(event) {
+            if (!draggedBlock) return;
+            const globalPos = event.data.global;
+            const stageScale = gameStage.scale.x;
+            draggedBlock.container.x = (globalPos.x + dragOffset.x) / stageScale;
+            draggedBlock.container.y = (globalPos.y + dragOffset.y) / stageScale;
+        }
+
+        function onDragEnd() {
+            if (!draggedBlock) return;
+            const block = draggedBlock;
+            draggedBlock = null;
+
+            gsap.to(block.container.scale, { x: 1.0, y: 1.0, duration: 0.15 });
+
+            // Determine target column based on drop location
+            const startX = 15;
+            const currentX = block.container.x + BLOCK_SIZE / 2;
+            let targetCol = Math.floor((currentX - startX + BLOCK_GAP / 2) / (BLOCK_SIZE + BLOCK_GAP));
+
+            targetCol = Math.max(0, Math.min(COLS - 1, targetCol));
+
+            if (targetCol === originalCol) {
+                returnToOriginalPosition(block, originalCol);
+                return;
+            }
+
+            // Allow drop into any non-full column
+            if (board[targetCol].length < ROWS) {
+                executeMove(block, originalCol, targetCol);
+            } else {
+                audio.playInvalid();
+                returnToOriginalPosition(block, originalCol);
+            }
+        }
+
+        function returnToOriginalPosition(block, origCol) {
+            isAnimating = true;
+            const origPos = getCanvasPos(origCol, block.row);
+            gsap.to(block.container, {
+                x: origPos.x,
+                y: origPos.y,
+                duration: 0.25,
+                ease: "back.out(1.5)",
+                onComplete: () => {
+                    isAnimating = false;
+                }
+            });
+        }
+
+        function isValidMove(block, fromCol, toCol) {
+            // Simulate destination row in toCol
+            const destRow = board[toCol].length;
+            if (destRow >= ROWS) return false; // Column is full!
+
+            const num = block.val;
+
+            // Check adjacent neighbors at (toCol, destRow)
+            // 1. Below (toCol, destRow - 1)
+            if (destRow > 0) {
+                const belowVal = board[toCol][destRow - 1].val;
+                if (num + belowVal === 10) return true;
+            }
+            // 2. Left (toCol - 1, destRow)
+            if (toCol > 0 && board[toCol - 1].length > destRow) {
+                const leftVal = board[toCol - 1][destRow].val;
+                if (num + leftVal === 10) return true;
+            }
+            // 3. Right (toCol + 1, destRow)
+            if (toCol < COLS - 1 && board[toCol + 1].length > destRow) {
+                const rightVal = board[toCol + 1][destRow].val;
+                if (num + rightVal === 10) return true;
+            }
+
+            return false;
+        }
+
+        async function executeMove(block, fromCol, toCol) {
+            isAnimating = true;
+
+            moves++;
+            updateUI();
+
+            // Remove from old column stack
+            board[fromCol].pop();
+
+            // Push to new column stack
+            const destRow = board[toCol].length;
+            block.col = toCol;
+            block.row = destRow;
+            board[toCol].push(block);
+
+            // Animate to new stack position
+            const destPos = getCanvasPos(toCol, destRow);
+            await gsap.to(block.container, {
+                x: destPos.x,
+                y: destPos.y,
+                duration: 0.2,
+                ease: "power2.out"
+            });
+
+            // Perform matching check
+            await checkAndClearMatches();
+
+            // 檢查是否無可湊十，若是則自動推升一行
+            await checkGameOver();
+
+            isAnimating = false;
+        }
+
+        async function checkAndClearMatches() {
+            let foundMatch = false;
+            let matchedBlocks = new Set();
+
+            // Scan all blocks to find adjacent pairs summing to 10
+            for (let c = 0; c < COLS; c++) {
+                for (let r = 0; r < board[c].length; r++) {
+                    const current = board[c][r];
+                    if (!current) continue;
+
+                    // Right neighbor
+                    if (c < COLS - 1 && board[c + 1].length > r) {
+                        const right = board[c + 1][r];
+                        if (current.val + right.val === 10) {
+                            matchedBlocks.add(current);
+                            matchedBlocks.add(right);
+                            foundMatch = true;
+                        }
+                    }
+
+                    // Top neighbor
+                    if (r < board[c].length - 1) {
+                        const top = board[c][r + 1];
+                        if (current.val + top.val === 10) {
+                            matchedBlocks.add(current);
+                            matchedBlocks.add(top);
+                            foundMatch = true;
+                        }
+                    }
+                }
+            }
+
+            if (foundMatch) {
+                // Play sound effect & update score
+                const matchCount = matchedBlocks.size;
+                audio.playCombo(matchCount);
+                score += matchCount * 50;
+                clearedBlocksCount += matchCount;
+                updateUI();
+
+                // Particle effects & visual feedback
+                const animPromises = [];
+                matchedBlocks.forEach(b => {
+                    spawnPopParticles(b.container.x + BLOCK_SIZE / 2, b.container.y + BLOCK_SIZE / 2);
+                    spawnFloatingText("+100", b.container.x + BLOCK_SIZE / 2, b.container.y);
+
+                    animPromises.push(
+                        gsap.to(b.container.scale, { x: 0, y: 0, duration: 0.25, ease: "back.in(2)" })
+                            .then(() => {
+                                gameStage.removeChild(b.container);
+                            })
+                    );
+                });
+
+                await Promise.all(animPromises);
+
+                // Remove matched blocks from board array
+                for (let c = 0; c < COLS; c++) {
+                    board[c] = board[c].filter(b => !matchedBlocks.has(b));
+                    // Reindex rows
+                    board[c].forEach((b, idx) => {
+                        b.row = idx;
+                    });
+                }
+
+                // Apply Gravity Drop
+                await applyGravity();
+
+                // Check empty columns shift rule
+                await applyColumnShift();
+
+                // 【休閒模式推升機制】：每累積消除 10 個果凍，底部向上推升一行
+                if (gameMode === 'casual') {
+                    await checkAndPushCasualRows();
+                }
+
+                // Recursive combo check
+                await checkAndClearMatches();
+            }
+        }
+
+        async function applyGravity() {
+            const fallPromises = [];
+            for (let c = 0; c < COLS; c++) {
+                for (let r = 0; r < board[c].length; r++) {
+                    const block = board[c][r];
+                    block.row = r;
+                    const targetPos = getCanvasPos(c, r);
+                    if (Math.abs(block.container.y - targetPos.y) > 1) {
+                        fallPromises.push(
+                            gsap.to(block.container, {
+                                y: targetPos.y,
+                                duration: 0.25,
+                                ease: "bounce.out"
+                            })
+                        );
+                    }
+                }
+            }
+            if (fallPromises.length > 0) {
+                await Promise.all(fallPromises);
+            }
+        }
+
+        async function applyColumnShift() {
+            let newBoard = [];
+            
+            // Filter out empty columns and shift non-empty ones to the left
+            for (let c = 0; c < COLS; c++) {
+                if (board[c].length > 0) {
+                    newBoard.push(board[c]);
+                }
+            }
+
+            // Pad with empty arrays on the right up to COLS
+            while (newBoard.length < COLS) {
+                newBoard.push([]);
+            }
+
+            const shiftPromises = [];
+
+            // Re-assign col indices and animate x positions
+            for (let c = 0; c < COLS; c++) {
+                for (let r = 0; r < newBoard[c].length; r++) {
+                    const block = newBoard[c][r];
+                    if (block.col !== c) {
+                        block.col = c;
+                        const targetPos = getCanvasPos(c, r);
+                        shiftPromises.push(
+                            gsap.to(block.container, {
+                                x: targetPos.x,
+                                duration: 0.3,
+                                ease: "power2.out"
+                            })
+                        );
+                    }
+                }
+            }
+
+            board = newBoard;
+
+            if (shiftPromises.length > 0) {
+                await Promise.all(shiftPromises);
+            }
+        }
+
+        // 休閒模式推升檢查
+        async function checkAndPushCasualRows() {
+            while (clearedBlocksCount >= 15 && !isGameOver) {
+                clearedBlocksCount -= 15;
+                updateUI();
+
+                const success = await pushOneBottomRow();
+                if (!success) break;
+            }
+        }
+
+        // 統一推升一行底部的核心邏輯
+        async function pushOneBottomRow() {
+            // 檢查是否有任何欄位已滿（即達到最大行數 10）
+            const isOverflow = board.some(col => col.length >= ROWS);
+            if (isOverflow) {
+                triggerGameOver();
+                return false;
+            }
+
+            audio.playPop();
+            spawnFloatingText("⬆️ 底部向上推升！", app.screen.width / 2, app.screen.height / 2);
+
+            const pushPromises = [];
+
+            // 向上推升舊果凍並在 row 0 插入新果凍
+            for (let c = 0; c < COLS; c++) {
+                // 1. 將原有果凍 row 索引 + 1 並向上移動
+                for (let r = 0; r < board[c].length; r++) {
+                    const block = board[c][r];
+                    block.row = r + 1;
+                    const targetPos = getCanvasPos(c, block.row);
+                    pushPromises.push(
+                        gsap.to(block.container, {
+                            y: targetPos.y,
+                            duration: 0.35,
+                            ease: "power2.out"
+                        })
+                    );
+                }
+
+                // 2. 於最底部 (row 0) 建立完全獨立隨機 (1-9) 的果凍方塊
+                const val = Math.floor(Math.random() * 9) + 1; // 1 ~ 9 完全隨機
+                const newBlock = createBlock(val, c, 0);
+
+                // 插入陣列最前端
+                board[c].unshift(newBlock);
+
+                // 從畫面下方向上升起動畫
+                const startPos = getCanvasPos(c, -1);
+                const endPos = getCanvasPos(c, 0);
+                newBlock.container.y = startPos.y;
+
+                pushPromises.push(
+                    gsap.to(newBlock.container, {
+                        y: endPos.y,
+                        duration: 0.35,
+                        ease: "power2.out"
+                    })
+                );
+            }
+
+            if (pushPromises.length > 0) {
+                await Promise.all(pushPromises);
+            }
+
+            return true;
+        }
+
+        function triggerGameOver() {
+            if (isGameOver) return;
+            isGameOver = true;
+            stopSpeedTimer();
+            audio.playVictory();
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('final-moves').innerText = moves;
+            document.getElementById('modal-gameover').classList.remove('hidden');
+        }
+
+        function hasAnyTenPairOnBoard() {
+            const seen = new Set();
+            for (let c = 0; c < COLS; c++) {
+                for (let r = 0; r < board[c].length; r++) {
+                    const val = board[c][r].val;
+                    const target = 10 - val;
+                    if (seen.has(target)) {
+                        return true; // 盤面上至少存在一組可合十的數字組合
+                    }
+                    seen.add(val);
+                }
+            }
+            return false;
+        }
+
+        async function checkGameOver() {
+            const isOverflow = board.some(col => col.length > ROWS);
+            if (isOverflow) {
+                triggerGameOver();
+                return;
+            }
+
+            // 若全屏完全沒有可以合十的方塊，自動推升一行！
+            if (!hasAnyTenPairOnBoard() && !isGameOver) {
+                spawnFloatingText("全屏無可湊十！自動推升一行 ⬆️", app.screen.width / 2, app.screen.height / 2);
+                const pushed = await pushOneBottomRow();
+                if (pushed) {
+                    await checkAndClearMatches();
+                    // 推升後再次檢查是否仍然全屏無解
+                    if (!hasAnyTenPairOnBoard()) {
+                        await checkGameOver();
+                    }
+                }
+            }
+        }
+
+        function drawStarShape(graphics, cx, cy, spikes, outerRadius, innerRadius) {
+            let rot = (Math.PI / 2) * 3;
+            let x = cx;
+            let y = cy;
+            let step = Math.PI / spikes;
+            const points = [];
+
+            for (let i = 0; i < spikes; i++) {
+                x = cx + Math.cos(rot) * outerRadius;
+                y = cy + Math.sin(rot) * outerRadius;
+                points.push(x, y);
+                rot += step;
+
+                x = cx + Math.cos(rot) * innerRadius;
+                y = cy + Math.sin(rot) * innerRadius;
+                points.push(x, y);
+                rot += step;
+            }
+            graphics.drawPolygon(points);
+        }
+
+        function spawnPopParticles(x, y) {
+            const pCount = 12;
+            const colors = [0xFFD166, 0xFF6B6B, 0x4ECDC4, 0x1A535C, 0xFFE66D];
+            for (let i = 0; i < pCount; i++) {
+                const p = new PIXI.Graphics();
+                const color = colors[i % colors.length];
+                p.beginFill(color);
+
+                // Alternate between mini stars and circular sparkles
+                if (i % 2 === 0) {
+                    drawStarShape(p, 0, 0, 5, 8, 4);
+                } else {
+                    p.drawCircle(0, 0, 5);
+                }
+
+                p.endFill();
+                p.x = x;
+                p.y = y;
+                gameStage.addChild(p);
+
+                const angle = (Math.PI * 2 / pCount) * i;
+                const dist = 30 + Math.random() * 40;
+
+                gsap.to(p, {
+                    x: x + Math.cos(angle) * dist,
+                    y: y + Math.sin(angle) * dist,
+                    alpha: 0,
+                    rotation: Math.PI * 2,
+                    duration: 0.5,
+                    ease: "power2.out",
+                    onComplete: () => gameStage.removeChild(p)
+                });
+            }
+        }
+
+        function spawnFloatingText(str, x, y) {
+            const txt = new PIXI.Text(str, {
+                fontFamily: 'Fredoka, sans-serif',
+                fontSize: 24,
+                fontWeight: 'bold',
+                fill: '#FF4081',
+                stroke: '#FFFFFF',
+                strokeThickness: 4
+            });
+            txt.anchor.set(0.5);
+            txt.x = x;
+            txt.y = y;
+            gameStage.addChild(txt);
+
+            gsap.to(txt, {
+                y: y - 40,
+                alpha: 0,
+                duration: 0.8,
+                ease: "power1.out",
+                onComplete: () => gameStage.removeChild(txt)
+            });
+        }
+
+        function showHint() {
+            if (isAnimating) return;
+
+            // Search for valid move
+            for (let fromCol = 0; fromCol < COLS; fromCol++) {
+                if (board[fromCol].length === 0) continue;
+                const topBlock = board[fromCol][board[fromCol].length - 1];
+
+                for (let toCol = 0; toCol < COLS; toCol++) {
+                    if (fromCol === toCol) continue;
+                    if (isValidMove(topBlock, fromCol, toCol)) {
+                        // Highlight candidate
+                        gsap.to(topBlock.container, {
+                            y: topBlock.container.y - 15,
+                            duration: 0.2,
+                            repeat: 3,
+                            yoyo: true,
+                            ease: "sine.inOut"
+                        });
+                        return;
+                    }
+                }
+            }
+
+            // No valid moves found
+            spawnFloatingText("無可湊滿10的移動！", app.screen.width / 2, app.screen.height / 2);
+        }
+
+        function hasAnyValidMove() {
+            let totalBlocks = 0;
+            for (let c = 0; c < COLS; c++) {
+                totalBlocks += board[c].length;
+            }
+
+            if (totalBlocks === 0) return false;
+
+            for (let fromCol = 0; fromCol < COLS; fromCol++) {
+                if (board[fromCol].length === 0) continue;
+                const topBlock = board[fromCol][board[fromCol].length - 1];
+
+                for (let toCol = 0; toCol < COLS; toCol++) {
+                    if (fromCol === toCol) continue;
+                    if (isValidMove(topBlock, fromCol, toCol)) return true;
+                }
+            }
+            return false;
+        }
+
+        function autoFitText(element, text, maxFontSizePx = 22) {
+            if (!element) return;
+            element.innerText = text;
+            const strLen = text.length;
+            let fontSize = maxFontSizePx;
+            
+            // 根據字串長度動態調整字型大小，避免過長產生換行或撐大容器
+            if (strLen > 9) {
+                fontSize = 11;
+            } else if (strLen > 7) {
+                fontSize = 13;
+            } else if (strLen > 5) {
+                fontSize = 16;
+            } else if (strLen > 4) {
+                fontSize = 18;
+            }
+            element.style.fontSize = `${fontSize}px`;
+        }
+
+        function updateUI() {
+            const scoreEl = document.getElementById('score-text');
+            const movesEl = document.getElementById('moves-text');
+            const pushLabel = document.getElementById('push-label');
+            const pushVal = document.getElementById('push-progress-text');
+
+            if (scoreEl) autoFitText(scoreEl, String(score), 22);
+            if (movesEl) autoFitText(movesEl, String(moves), 22);
+
+            if (gameMode === 'casual') {
+                if (pushLabel) pushLabel.innerText = "推升進度";
+                if (pushVal) {
+                    pushVal.className = "font-black text-emerald-500 leading-none transition-all duration-150";
+                    autoFitText(pushVal, `${clearedBlocksCount % 15}/15`, 20);
+                }
+            } else {
+                if (pushLabel) pushLabel.innerText = "下次推升";
+                if (pushVal) {
+                    pushVal.className = "font-black text-amber-500 animate-pulse leading-none transition-all duration-150";
+                    autoFitText(pushVal, `${speedCountdown}s (${speedIntervalSec}s)`, 18);
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initApp();
+
+            // Mode Selector Buttons
+            const btnCasual = document.getElementById('mode-casual-btn');
+            const btnSpeed = document.getElementById('mode-speed-btn');
+
+            btnCasual.addEventListener('click', () => {
+                if (gameMode === 'casual') return;
+                gameMode = 'casual';
+                btnCasual.className = "px-3 py-1 rounded-xl text-xs font-bold transition-all bg-pink-500 text-white shadow";
+                btnSpeed.className = "px-3 py-1 rounded-xl text-xs font-bold transition-all text-pink-600 hover:bg-pink-200/50";
+                startLevel(1);
+            });
+
+            btnSpeed.addEventListener('click', () => {
+                if (gameMode === 'speed') return;
+                gameMode = 'speed';
+                btnSpeed.className = "px-3 py-1 rounded-xl text-xs font-bold transition-all bg-amber-500 text-white shadow";
+                btnCasual.className = "px-3 py-1 rounded-xl text-xs font-bold transition-all text-pink-600 hover:bg-pink-200/50";
+                startLevel(1);
+            });
+
+            // Modal Controls
+            const modalInst = document.getElementById('modal-instructions');
+            const modalGameOver = document.getElementById('modal-gameover');
+
+            document.querySelectorAll('.btn-close-modal').forEach(btn => {
+                btn.addEventListener('click', () => modalInst.classList.add('hidden'));
+            });
+
+            document.getElementById('btn-help').addEventListener('click', () => {
+                modalInst.classList.remove('hidden');
+            });
+
+            document.getElementById('btn-restart').addEventListener('click', () => {
+                startLevel(1);
+            });
+
+            document.getElementById('btn-restart-gameover').addEventListener('click', () => {
+                modalGameOver.classList.add('hidden');
+                startLevel(1);
+            });
+
+            document.getElementById('btn-hint').addEventListener('click', () => {
+                showHint();
+            });
+
+            // Audio Toggle
+            const btnSound = document.getElementById('btn-sound');
+            btnSound.addEventListener('click', () => {
+                audio.muted = !audio.muted;
+                btnSound.innerHTML = audio.muted ? 
+                    '<i class="fa-solid fa-volume-xmark text-lg"></i>' : 
+                    '<i class="fa-solid fa-volume-high text-lg"></i>';
+                btnSound.classList.toggle('bg-gray-300', audio.muted);
+                btnSound.classList.toggle('bg-yellow-300', !audio.muted);
+            });
+        });
+    </script>
+</body>
+</html>
