@@ -188,6 +188,13 @@
             constructor() {
                 this.ctx = null;
                 this.muted = false;
+                // BGM Background Music Player
+                this.bgmAudio = new Audio();
+                this.bgmAudio.loop = true;
+                this.bgmPlaying = false;
+                
+                // 設定同資料夾下的預設背景音樂檔名 (./bgm.mp3)
+                this.defaultBgmUrl = './StockTune-Sunrise Over Horizon_1789906107.mp3';
             }
 
             init() {
