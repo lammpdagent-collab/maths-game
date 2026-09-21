@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBERBOARD 2077 - Cyberpunk Geoboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PixiJS v7 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: #05050d;
+            color: #00f3ff;
+            overflow-x: hidden;
+            user-select: none;
+        }
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        /* Cyberpunk UI Neon Glows */
+        .neon-border-cyan {
+            box-shadow: 0 0 10px #00f3ff, inset 0 0 10px #00f3ff;
+            border: 1px solid #00f3ff;
+        }
+        .neon-border-magenta {
+            box-shadow: 0 0 10px #ff0055, inset 0 0 10px #ff0055;
+            border: 1px solid #ff0055;
+        }
+        .neon-btn-cyan {
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid #00f3ff;
+            color: #00f3ff;
+            text-shadow: 0 0 5px #00f3ff;
+            transition: all 0.2s ease;
+        }
+        .neon-btn-cyan:hover, .neon-btn-cyan.active {
+            background: #00f3ff;
+            color: #05050d;
+            box-shadow: 0 0 15px #00f3ff;
+            text-shadow: none;
+        }
+        .neon-btn-magenta {
+            background: rgba(255, 0, 85, 0.1);
+            border: 1px solid #ff0055;
+            color: #ff0055;
+            text-shadow: 0 0 5px #ff0055;
+            transition: all 0.2s ease;
+        }
+        .neon-btn-magenta:hover, .neon-btn-magenta.active {
+            background: #ff0055;
+            color: #05050d;
+            box-shadow: 0 0 15px #ff0055;
+            text-shadow: none;
+        }
+        .neon-btn-yellow {
+            background: rgba(255, 230, 0, 0.1);
+            border: 1px solid #ffe600;
+            color: #ffe600;
+            text-shadow: 0 0 5px #ffe600;
+            transition: all 0.2s ease;
+        }
+        .neon-btn-yellow:hover {
+            background: #ffe600;
+            color: #05050d;
+            box-shadow: 0 0 15px #ffe600;
+            text-shadow: none;
+        }
+        /* Scanline Overlay */
+        .scanline {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0, 0, 0, 0.3) 50%,
+                rgba(0, 0, 0, 0.3)
+            );
+            background-size: 100% 4px;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #05050d;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #00f3ff;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between items-center p-2 md:p-4 scanline relative">
+
+    <!-- HUD Header -->
+    <header class="w-full max-w-5xl flex flex-col md:flex-row justify-between items-center gap-4 mb-2 p-3 bg-slate-900/80 rounded-lg neon-border-cyan backdrop-blur">
+        <div class="flex items-center gap-3">
+            <div class="w-4 h-8 bg-cyan-400 animate-pulse"></div>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-black font-orbitron tracking-wider text-cyan-400 drop-shadow-[0_0_8px_rgba(0,243,255,0.8)]">
+                    CYBERBOARD <span class="text-pink-500">2077</span>
+                </h1>
+                <p class="text-xs text-slate-400 font-mono">GEOMETRIC VECTOR SYSTEM v2.0</p>
+            </div>
+        </div>
+
+        <!-- Mode Select Switcher -->
+        <div class="flex items-center bg-slate-950 p-1 rounded-md border border-slate-800">
+            <button id="btn-mode-practice" class="neon-btn-cyan active px-4 py-1.5 rounded font-bold font-orbitron text-sm uppercase tracking-wide">
+                練習模式 Practice
+            </button>
+            <button id="btn-mode-challenge" class="neon-btn-magenta px-4 py-1.5 rounded font-bold font-orbitron text-sm uppercase tracking-wide ml-2">
+                挑戰模式 Challenge
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="w-full max-w-5xl flex flex-col lg:flex-row gap-4 items-center lg:items-start justify-center my-auto">
+        
+        <!-- Left / Top: PixiJS Canvas Canvas Container -->
+        <div class="relative flex flex-col items-center">
+            <!-- HUD Status Bar -->
+            <div class="w-full flex justify-between items-center mb-2 px-3 py-1 bg-slate-950/90 rounded border border-cyan-900/60 font-mono text-xs">
+                <span id="target-info" class="text-cyan-300 font-semibold">目標: 計算相同長度線段</span>
+                <span id="status-counter" class="text-yellow-400 font-bold">進度: 0 / 0</span>
+            </div>
+
+            <!-- Canvas Wrapper -->
+            <div id="canvas-container" class="relative rounded-xl overflow-hidden neon-border-cyan bg-slate-950/90 shadow-[0_0_30px_rgba(0,243,255,0.15)] touch-none">
+                <!-- Pixi Canvas rendered inside here -->
+            </div>
+
+            <!-- Canvas Controls Bar -->
+            <div class="w-full flex justify-between gap-2 mt-3">
+                <button id="btn-undo" class="flex-1 neon-btn-yellow py-2 px-3 rounded font-orbitron text-xs md:text-sm font-bold flex justify-center items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+                    撤銷 Undo
+                </button>
+                <button id="btn-clear" class="flex-1 neon-btn-magenta py-2 px-3 rounded font-orbitron text-xs md:text-sm font-bold flex justify-center items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    重置 Clear
+                </button>
+                <button id="btn-next" class="flex-1 neon-btn-cyan py-2 px-3 rounded font-orbitron text-xs md:text-sm font-bold flex justify-center items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-m0 0l-7 7m7-7H3"></path></svg>
+                    下一題 Next
+                </button>
+            </div>
+        </div>
+
+        <!-- Right / Bottom: Cyber Instructions & Assistant Panel -->
+        <div class="w-full lg:w-80 flex flex-col gap-3">
+            
+            <!-- Instructions Card -->
+            <div class="p-4 bg-slate-900/90 rounded-lg neon-border-cyan backdrop-blur">
+                <h2 class="text-lg font-bold font-orbitron text-cyan-400 mb-2 flex items-center gap-2">
+                    <span class="inline-block w-2 h-2 bg-cyan-400 rounded-full animate-ping"></span>
+                    任務說明 TASK BRIEFING
+                </h2>
+                <div id="instruction-text" class="text-sm text-slate-300 space-y-2 leading-relaxed">
+                    <!-- Dynamic Instruction text injected by JS -->
+                </div>
+            </div>
+
+            <!-- Assistant / Hint Visualizer Box -->
+            <div id="hint-card" class="p-4 bg-slate-900/90 rounded-lg neon-border-magenta backdrop-blur hidden transition-all duration-300">
+                <h3 class="text-sm font-bold font-orbitron text-pink-500 mb-1 flex items-center gap-1">
+                    <svg class="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    AI 戰術分析 HELPER
+                </h3>
+                <div id="hint-text" class="text-xs text-pink-300 font-mono leading-relaxed space-y-1">
+                    <!-- Dynamic hint details -->
+                </div>
+            </div>
+
+            <!-- Sound & Audio Controls -->
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 flex justify-between items-center text-xs text-slate-400">
+                <span class="font-mono">音效 SFX: AUDIO ONLINE</span>
+                <button id="btn-sound-toggle" class="text-cyan-400 hover:text-cyan-300 font-bold px-2 py-1 rounded border border-cyan-800">
+                    🔊 SOUND ON
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Victory Cyber Modal Overlay -->
+    <div id="victory-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-slate-900 border-2 border-cyan-400 p-6 rounded-xl max-w-sm w-full mx-4 text-center shadow-[0_0_50px_rgba(0,243,255,0.5)] transform scale-95 transition-transform duration-300" id="modal-box">
+            <div class="text-4xl mb-2">🎉</div>
+            <h2 class="text-2xl font-black font-orbitron text-cyan-400 tracking-wider mb-2">MISSION ACCOMPLISHED!</h2>
+            <p id="modal-desc" class="text-sm text-slate-300 mb-6 font-mono">成功畫出所有可能長度的斜線段！</p>
+            <button id="btn-modal-next" class="w-full neon-btn-cyan py-3 rounded-lg font-orbitron font-bold text-base uppercase tracking-widest shadow-lg">
+                進入下一關 NEXT LEVEL
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /* Cyberpunk Synthesizer Audio Engine using Web Audio API */
+        class CyberAudio {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playTone(freq, type = 'sine', duration = 0.15, gainVal = 0.1) {
+                if (!this.enabled) return;
+                this.init();
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            }
+
+            playSnap() {
+                this.playTone(800, 'sine', 0.08, 0.15);
+            }
+
+            playError() {
+                if (!this.enabled) return;
+                this.init();
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.3);
+                } catch(e){}
+            }
+
+            playSuccess() {
+                if (!this.enabled) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => {
+                        this.playTone(freq, 'triangle', 0.2, 0.15);
+                    }, idx * 90);
+                });
+            }
+        }
+
+        const audioEngine = new CyberAudio();
+    </script>
+
+    <script>
+        // Constants & Configuration
+        const GRID_SIZE = 10; // 10x10 Grid
+        const COL_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+        
+        // Colors Hex
+        const COLOR_BG = 0x05050d;
+        const COLOR_GRID = 0x1e293b;
+        const COLOR_PEG = 0x00f3ff;
+        const COLOR_PEG_HOVER = 0xffe600;
+        const COLOR_BASE_LINE = 0xff0055; // Pink/Magenta for initial slant
+        const COLOR_USER_LINE = 0x00f3ff; // Cyan for user valid lines
+        const COLOR_START_POINT = 0xffe600; // Yellow designated start point
+        const COLOR_HINT_TRIANGLE = 0x00ff88; // Bright Neon Green for Hint Triangle
+
+        // App state
+        let app = null;
+        let canvasWidth = 500;
+        let pegSpacing = 45;
+        let offsetX = 25;
+        let offsetY = 25;
+
+        // Game State Variables
+        let currentMode = 'practice'; // 'practice' | 'challenge'
+        let selectedPeg = null; // Currently clicked start peg for drawing
+        let hoveredPeg = null;
+        let activeLines = []; // Array of { p1: {x, y}, p2: {x, y} } user drawn lines
+        
+        // Target Setup State
+        let baseSegment = null; // { p1: {x,y}, p2: {x,y} }
+        let designatedStart = null; // {x, y}
+        let targetLengthSq = 0; // Squared length (dx^2 + dy^2)
+        let validTargets = []; // Array of target endpoints for practice mode
+        let showHint = false;
+
+        // Graphic Layers
+        let gridContainer = null;
+        let linesContainer = null;
+        let hintContainer = null;
+        let pegsContainer = null;
+        let pegsGraphicMap = [];
+
+        // Helper Math Functions
+        function getDistSq(p1, p2) {
+            const dx = p1.x - p2.x;
+            const dy = p1.y - p2.y;
+            return dx * dx + dy * dy;
+        }
+
+        function getCoordName(p) {
+            return `${COL_LABELS[p.x]}${p.y + 1}`;
+        }
+
+        function isSamePoint(p1, p2) {
+            return p1.x === p2.x && p1.y === p2.y;
+        }
+
+        function isSameSegment(seg1, seg2) {
+            return (isSamePoint(seg1.p1, seg2.p1) && isSamePoint(seg1.p2, seg2.p2)) ||
+                   (isSamePoint(seg1.p1, seg2.p2) && isSamePoint(seg1.p2, seg2.p1));
+        }
+
+        function initPixiApp() {
+            const containerEl = document.getElementById('canvas-container');
+            
+            // Calculate responsive size (square)
+            const minDim = Math.min(window.innerWidth - 32, 520);
+            canvasWidth = Math.max(300, minDim);
+            
+            app = new PIXI.Application({
+                width: canvasWidth,
+                height: canvasWidth,
+                backgroundColor: COLOR_BG,
+                antialias: true,
+                resolution: window.devicePixelRatio || 1,
+                autoDensity: true
+            });
+
+            containerEl.appendChild(app.view);
+
+            // Calculate Grid Dimensions
+            const padding = 45;
+            pegSpacing = (canvasWidth - padding * 2) / (GRID_SIZE - 1);
+            offsetX = padding;
+            offsetY = padding;
+
+            // Initialize Layers
+            gridContainer = new PIXI.Container();
+            hintContainer = new PIXI.Container();
+            linesContainer = new PIXI.Container();
+            pegsContainer = new PIXI.Container();
+
+            app.stage.addChild(gridContainer);
+            app.stage.addChild(hintContainer);
+            app.stage.addChild(linesContainer);
+            app.stage.addChild(pegsContainer);
+
+            drawBackgroundGrid();
+            createPegs();
+            startNewRound();
+
+            // Resize handling
+            window.addEventListener('resize', handleResize);
+        }
+
+        function handleResize() {
+            if (!app) return;
+            const minDim = Math.min(window.innerWidth - 32, 520);
+            const newWidth = Math.max(300, minDim);
+            if (Math.abs(newWidth - canvasWidth) > 10) {
+                canvasWidth = newWidth;
+                app.renderer.resize(canvasWidth, canvasWidth);
+                const padding = 45;
+                pegSpacing = (canvasWidth - padding * 2) / (GRID_SIZE - 1);
+                offsetX = padding;
+                offsetY = padding;
+                
+                // Redraw
+                drawBackgroundGrid();
+                updatePegPositions();
+                renderAllGraphics();
+            }
+        }
+
+        function getBoardPixel(x, y) {
+            return {
+                px: offsetX + x * pegSpacing,
+                py: offsetY + y * pegSpacing
+            };
+        }
+
+        function drawBackgroundGrid() {
+            gridContainer.removeChildren();
+            const g = new PIXI.Graphics();
+            
+            // Subtle Grid lines
+            g.lineStyle(1, COLOR_GRID, 0.4);
+            for (let i = 0; i < GRID_SIZE; i++) {
+                const startX = offsetX + i * pegSpacing;
+                const startY = offsetY + i * pegSpacing;
+                
+                // Vertical
+                g.moveTo(startX, offsetY);
+                g.lineTo(startX, offsetY + (GRID_SIZE - 1) * pegSpacing);
+                
+                // Horizontal
+                g.moveTo(offsetX, startY);
+                g.lineTo(offsetX + (GRID_SIZE - 1) * pegSpacing, startY);
+            }
+
+            gridContainer.addChild(g);
+
+            // Coordinates Labels (A-J, 1-10)
+            for (let i = 0; i < GRID_SIZE; i++) {
+                // Columns (Top)
+                const colText = new PIXI.Text(COL_LABELS[i], {
+                    fontFamily: 'Orbitron',
+                    fontSize: Math.max(10, pegSpacing * 0.35),
+                    fill: 0x64748b,
+                    align: 'center'
+                });
+                colText.anchor.set(0.5);
+                colText.position.set(offsetX + i * pegSpacing, offsetY - 20);
+                gridContainer.addChild(colText);
+
+                // Rows (Left)
+                const rowText = new PIXI.Text((i + 1).toString(), {
+                    fontFamily: 'Orbitron',
+                    fontSize: Math.max(10, pegSpacing * 0.35),
+                    fill: 0x64748b,
+                    align: 'center'
+                });
+                rowText.anchor.set(0.5);
+                rowText.position.set(offsetX - 20, offsetY + i * pegSpacing);
+                gridContainer.addChild(rowText);
+            }
+        }
+
+        function createPegs() {
+            pegsContainer.removeChildren();
+            pegsGraphicMap = [];
+
+            for (let x = 0; x < GRID_SIZE; x++) {
+                pegsGraphicMap[x] = [];
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    const pos = getBoardPixel(x, y);
+                    
+                    const pegGroup = new PIXI.Container();
+                    pegGroup.position.set(pos.px, pos.py);
+
+                    // Interactive Hit Area
+                    const hitArea = new PIXI.Graphics();
+                    hitArea.beginFill(0x000000, 0.001);
+                    hitArea.drawCircle(0, 0, pegSpacing * 0.45);
+                    hitArea.endFill();
+                    hitArea.eventMode = 'static';
+                    hitArea.cursor = 'pointer';
+
+                    // Peg Visual Graphics
+                    const pegVisual = new PIXI.Graphics();
+                    drawPegVisual(pegVisual, x, y, false, false);
+
+                    pegGroup.addChild(hitArea);
+                    pegGroup.addChild(pegVisual);
+
+                    // Event Listeners
+                    hitArea.on('pointerdown', () => onPegClick(x, y));
+                    hitArea.on('pointerover', () => onPegHover(x, y, true));
+                    hitArea.on('pointerout', () => onPegHover(x, y, false));
+
+                    pegsContainer.addChild(pegGroup);
+                    pegsGraphicMap[x][y] = { group: pegGroup, visual: pegVisual };
+                }
+            }
+        }
+
+        function updatePegPositions() {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    if (pegsGraphicMap[x] && pegsGraphicMap[x][y]) {
+                        const pos = getBoardPixel(x, y);
+                        pegsGraphicMap[x][y].group.position.set(pos.px, pos.py);
+                    }
+                }
+            }
+        }
+
+        function drawPegVisual(g, x, y, isHovered = false, isSelected = false) {
+            g.clear();
+            const isDesignated = designatedStart && designatedStart.x === x && designatedStart.y === y;
+
+            const radius = isSelected || isDesignated ? 7 : (isHovered ? 6 : 4);
+            
+            // Outer Ring / Glow
+            if (isDesignated) {
+                g.beginFill(COLOR_START_POINT, 0.3);
+                g.drawCircle(0, 0, radius + 6);
+                g.endFill();
+                g.lineStyle(2, COLOR_START_POINT, 1);
+                g.beginFill(COLOR_START_POINT);
+                g.drawCircle(0, 0, radius);
+                g.endFill();
+            } else if (isSelected) {
+                g.beginFill(COLOR_PEG_HOVER, 0.3);
+                g.drawCircle(0, 0, radius + 5);
+                g.endFill();
+                g.lineStyle(2, COLOR_PEG_HOVER, 1);
+                g.beginFill(0xffffff);
+                g.drawCircle(0, 0, radius);
+                g.endFill();
+            } else if (isHovered) {
+                g.lineStyle(2, COLOR_PEG_HOVER, 0.8);
+                g.beginFill(COLOR_PEG_HOVER);
+                g.drawCircle(0, 0, radius);
+                g.endFill();
+            } else {
+                g.lineStyle(1, 0x00f3ff, 0.5);
+                g.beginFill(0x0f172a);
+                g.drawCircle(0, 0, radius);
+                g.endFill();
+                // Center metallic dot
+                g.beginFill(0x00f3ff);
+                g.drawCircle(0, 0, 1.5);
+                g.endFill();
+            }
+        }
+
+        function startNewRound() {
+            activeLines = [];
+            selectedPeg = null;
+            showHint = false;
+            document.getElementById('hint-card').classList.add('hidden');
+
+            if (currentMode === 'practice') {
+                generatePracticeProblem();
+            } else {
+                generateChallengeProblem();
+            }
+
+            renderAllGraphics();
+        }
+
+        // Practice Mode: Generate diagonal line + designated endpoint + find all equal length targets
+        function generatePracticeProblem() {
+            let valid = false;
+            let p1, p2, dx, dy;
+
+            // Generate a valid slanted line (dx != 0 and dy != 0)
+            while (!valid) {
+                p1 = { x: Math.floor(Math.random() * 8) + 1, y: Math.floor(Math.random() * 8) + 1 };
+                
+                // Choose dx, dy between -3 and 3 (excluding 0)
+                dx = (Math.floor(Math.random() * 3) + 1) * (Math.random() < 0.5 ? 1 : -1);
+                dy = (Math.floor(Math.random() * 3) + 1) * (Math.random() < 0.5 ? 1 : -1);
+
+                p2 = { x: p1.x + dx, y: p1.y + dy };
+
+                if (p2.x >= 0 && p2.x < GRID_SIZE && p2.y >= 0 && p2.y < GRID_SIZE) {
+                    valid = true;
+                }
+            }
+
+            baseSegment = { p1, p2 };
+            
+            // Randomly select one endpoint as designated start
+            designatedStart = Math.random() < 0.5 ? p1 : p2;
+            const otherEnd = isSamePoint(designatedStart, p1) ? p2 : p1;
+
+            targetLengthSq = getDistSq(p1, p2);
+
+            // Find all possible grid points P from designatedStart such that distSq(designatedStart, P) == targetLengthSq (excluding otherEnd)
+            validTargets = [];
+            for (let x = 0; x < GRID_SIZE; x++) {
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    const testPt = { x, y };
+                    if (isSamePoint(testPt, designatedStart) || isSamePoint(testPt, otherEnd)) continue;
+
+                    if (getDistSq(designatedStart, testPt) === targetLengthSq) {
+                        validTargets.push(testPt);
+                    }
+                }
+            }
+
+            // If no alternate target exists, regenerate
+            if (validTargets.length === 0) {
+                generatePracticeProblem();
+                return;
+            }
+
+            // Update Instructions
+            const dxAbs = Math.abs(p1.x - p2.x);
+            const dyAbs = Math.abs(p1.y - p2.y);
+            const startName = getCoordName(designatedStart);
+            const baseNameP1 = getCoordName(p1);
+            const baseNameP2 = getCoordName(p2);
+
+            document.getElementById('instruction-text').innerHTML = `
+                <p>已生成初始斜線段：<span class="text-pink-400 font-bold font-mono">${baseNameP1} 至 ${baseNameP2}</span>。</p>
+                <p>📍 指定起點：<span class="text-yellow-400 font-bold font-mono">${startName}</span></p>
+                <p class="text-xs text-slate-400 mt-1">請以 <span class="text-yellow-400 font-bold">${startName}</span> 為起點，畫出 <span class="text-cyan-300 font-bold">所有所有長度相同</span> 的其他斜線段！</p>
+            `;
+
+            updateStatusCounter();
+        }
+
+        // Challenge Mode: Generate base line for completing a Rhombus
+        function generateChallengeProblem() {
+            let valid = false;
+            let p1, p2, dx, dy;
+
+            while (!valid) {
+                p1 = { x: Math.floor(Math.random() * 6) + 2, y: Math.floor(Math.random() * 6) + 2 };
+                dx = (Math.floor(Math.random() * 2) + 1) * (Math.random() < 0.5 ? 1 : -1);
+                dy = (Math.floor(Math.random() * 2) + 1) * (Math.random() < 0.5 ? 1 : -1);
+                p2 = { x: p1.x + dx, y: p1.y + dy };
+
+                if (p2.x >= 0 && p2.x < GRID_SIZE && p2.y >= 0 && p2.y < GRID_SIZE) {
+                    valid = true;
+                }
+            }
+
+            baseSegment = { p1, p2 };
+            designatedStart = null;
+            targetLengthSq = getDistSq(p1, p2);
+            validTargets = [];
+
+            const p1Name = getCoordName(p1);
+            const p2Name = getCoordName(p2);
+
+            document.getElementById('instruction-text').innerHTML = `
+                <p>已生成基準斜線段 AB：<span class="text-pink-400 font-bold font-mono">${p1Name} 至 ${p2Name}</span>。</p>
+                <p class="mt-1">🔷 挑戰目標：加畫 <span class="text-cyan-400 font-bold">3 條線段</span>，組成一個四邊相等的 <span class="text-yellow-400 font-bold">菱形 (Rhombus)</span>！</p>
+            `;
+
+            document.getElementById('target-info').innerText = "目標: 加畫 3 條線段組成菱形";
+            document.getElementById('status-counter').innerText = `已畫線段: ${activeLines.length} / 3`;
+        }
+
+        function updateStatusCounter() {
+            if (currentMode === 'practice') {
+                // Find how many valid targets have been connected by activeLines
+                let foundCount = 0;
+                validTargets.forEach(targetPt => {
+                    const exists = activeLines.some(line => 
+                        (isSamePoint(line.p1, designatedStart) && isSamePoint(line.p2, targetPt)) ||
+                        (isSamePoint(line.p2, designatedStart) && isSamePoint(line.p1, targetPt))
+                    );
+                    if (exists) foundCount++;
+                });
+
+                document.getElementById('target-info').innerText = `起點: ${getCoordName(designatedStart)} (尋找等長線段)`;
+                document.getElementById('status-counter').innerText = `已完成: ${foundCount} / ${validTargets.length}`;
+            } else {
+                document.getElementById('status-counter').innerText = `已畫線段: ${activeLines.length} / 3`;
+            }
+        }
+
+        function onPegClick(x, y) {
+            audioEngine.playSnap();
+
+            const clickedPt = { x, y };
+
+            if (!selectedPeg) {
+                // Select Start Peg
+                selectedPeg = clickedPt;
+            } else {
+                // Select End Peg & Draw Line
+                if (!isSamePoint(selectedPeg, clickedPt)) {
+                    const newLine = { p1: selectedPeg, p2: clickedPt };
+                    
+                    // Prevent duplicate lines
+                    const isDuplicate = activeLines.some(l => isSameSegment(l, newLine)) || isSameSegment(newLine, baseSegment);
+                    
+                    if (!isDuplicate) {
+                        activeLines.push(newLine);
+                        validateCurrentState(newLine);
+                    }
+                }
+                selectedPeg = null; // Reset selection after drawing attempt
+            }
+
+            renderAllGraphics();
+        }
+
+        function onPegHover(x, y, isOver) {
+            if (isOver) {
+                hoveredPeg = { x, y };
+            } else {
+                hoveredPeg = null;
+            }
+            
+            // Re-render peg highlights
+            for (let px = 0; px < GRID_SIZE; px++) {
+                for (let py = 0; py < GRID_SIZE; py++) {
+                    const isSel = selectedPeg && selectedPeg.x === px && selectedPeg.y === py;
+                    const isHov = hoveredPeg && hoveredPeg.x === px && hoveredPeg.y === py;
+                    drawPegVisual(pegsGraphicMap[px][py].visual, px, py, isHov, isSel);
+                }
+            }
+        }
+
+        // Validate user drawn lines & Trigger Assistive Hints
+        function validateCurrentState(latestLine) {
+            if (currentMode === 'practice') {
+                // Must originate from designatedStart
+                const isFromStart = isSamePoint(latestLine.p1, designatedStart) || isSamePoint(latestLine.p2, designatedStart);
+                const otherEnd = isSamePoint(latestLine.p1, designatedStart) ? latestLine.p2 : latestLine.p1;
+                
+                const lineLenSq = getDistSq(latestLine.p1, latestLine.p2);
+                const isCorrectLength = lineLenSq === targetLengthSq;
+
+                if (!isFromStart || !isCorrectLength) {
+                    // INCORRECT LINE DETECTED -> Trigger Assistive Hint
+                    audioEngine.playError();
+                    triggerAssistiveHint(latestLine, isFromStart);
+                } else {
+                    // Correct line drawn!
+                    audioEngine.playSnap();
+                    updateStatusCounter();
+                    checkPracticeSuccess();
+                }
+            } else {
+                // Challenge Mode
+                updateStatusCounter();
+                if (activeLines.length === 3) {
+                    checkChallengeSuccess();
+                }
+            }
+        }
+
+        function triggerAssistiveHint(drawnLine, isFromStart) {
+            showHint = true;
+            
+            const dxAbs = Math.abs(baseSegment.p1.x - baseSegment.p2.x);
+            const dyAbs = Math.abs(baseSegment.p1.y - baseSegment.p2.y);
+            
+            const startName = getCoordName(baseSegment.p1);
+            const endName = getCoordName(baseSegment.p2);
+
+            let errorMsg = "";
+            if (!isFromStart) {
+                errorMsg = `⚠️ 提示：請務必以指定點 <span class="text-yellow-400 font-bold">${getCoordName(designatedStart)}</span> 為起點畫線！`;
+            } else {
+                errorMsg = `⚠️ 長度不正確！利用直角三角形觀察斜線跨越的格數。`;
+            }
+
+            const hintCard = document.getElementById('hint-card');
+            const hintText = document.getElementById('hint-text');
+
+            hintText.innerHTML = `
+                <p class="text-yellow-300 font-bold mb-1">${errorMsg}</p>
+                <div class="bg-slate-950 p-2 rounded border border-pink-900/50 my-1">
+                    <p class="text-pink-400 font-bold">斜線段 (${startName} 至 ${endName}) 分析：</p>
+                    <p>↔️ 打橫跨了：<span class="text-cyan-300 font-bold">${dxAbs}</span> 格 (Δx = ${dxAbs})</p>
+                    <p>↕️ 打直跨了：<span class="text-cyan-300 font-bold">${dyAbs}</span> 格 (Δy = ${dyAbs})</p>
+                </div>
+                <p class="text-slate-300 text-[11px]">💡 根據勾股定理：<br/>相同長度的斜線，必須同樣跨越 <span class="text-yellow-300 font-bold">${dxAbs} 格與 ${dyAbs} 格</span> (方向可旋轉)！</p>
+            `;
+
+            hintCard.classList.remove('hidden');
+        }
+
+        function checkPracticeSuccess() {
+            // Check if all valid targets have been connected to designatedStart
+            let allFound = true;
+            validTargets.forEach(targetPt => {
+                const connected = activeLines.some(line => 
+                    (isSamePoint(line.p1, designatedStart) && isSamePoint(line.p2, targetPt)) ||
+                    (isSamePoint(line.p2, designatedStart) && isSamePoint(line.p1, targetPt))
+                );
+                if (!connected) allFound = false;
+            });
+
+            if (allFound && validTargets.length > 0) {
+                audioEngine.playSuccess();
+                showVictoryModal(`MISSION ACCOMPLISHED!\n成功找出所有 ${validTargets.length} 條相同長度的斜線段！`);
+            }
+        }
+
+        function checkChallengeSuccess() {
+            // Check if all 4 lines (baseSegment + 3 activeLines) form a valid closed 4-sided Rhombus
+            const all4Lines = [baseSegment, ...activeLines];
+
+            if (isRhombus(all4Lines)) {
+                audioEngine.playSuccess();
+                showVictoryModal("RHOMBUS COMPLETED!\n成功加畫 3 條線段組成標準菱形！");
+            } else {
+                audioEngine.playError();
+                document.getElementById('hint-card').classList.remove('hidden');
+                document.getElementById('hint-text').innerHTML = `
+                    <p class="text-pink-400 font-bold">❌ 目前圖形不是四邊相等的菱形！</p>
+                    <p class="text-slate-300 mt-1 text-xs">請檢查 4 條線段是否首尾相連封閉，且每條邊長度均等於基準斜線。</p>
+                `;
+            }
+        }
+
+        function isRhombus(lines) {
+            if (lines.length !== 4) return false;
+
+            // Collect all unique vertices
+            const vertices = [];
+            lines.forEach(l => {
+                if (!vertices.some(v => isSamePoint(v, l.p1))) vertices.push(l.p1);
+                if (!vertices.some(v => isSamePoint(v, l.p2))) vertices.push(l.p2);
+            });
+
+            // A 4-sided polygon must have exactly 4 distinct vertices
+            if (vertices.length !== 4) return false;
+
+            // Check if each vertex has degree 2 (connected to exactly 2 lines)
+            for (let v of vertices) {
+                const degree = lines.filter(l => isSamePoint(l.p1, v) || isSamePoint(l.p2, v)).length;
+                if (degree !== 2) return false;
+            }
+
+            // Check if all 4 sides are equal in length
+            const L0 = getDistSq(lines[0].p1, lines[0].p2);
+            for (let i = 1; i < 4; i++) {
+                if (getDistSq(lines[i].p1, lines[i].p2) !== L0) return false;
+            }
+
+            return true;
+        }
+
+        function showVictoryModal(msg) {
+            document.getElementById('modal-desc').innerText = msg;
+            const modal = document.getElementById('victory-modal');
+            const box = document.getElementById('modal-box');
+            modal.classList.remove('pointer-events-none', 'opacity-0');
+            box.classList.remove('scale-95');
+            box.classList.add('scale-100');
+        }
+
+        function hideVictoryModal() {
+            const modal = document.getElementById('victory-modal');
+            const box = document.getElementById('modal-box');
+            modal.classList.add('pointer-events-none', 'opacity-0');
+            box.classList.remove('scale-100');
+            box.classList.add('scale-95');
+        }
+
+        function renderAllGraphics() {
+            linesContainer.removeChildren();
+            hintContainer.removeChildren();
+
+            const lg = new PIXI.Graphics();
+            const hg = new PIXI.Graphics();
+
+            // 1. Draw Assistive Dashed Right-Angled Triangle Hint if triggered
+            if (showHint && baseSegment) {
+                const p1 = getBoardPixel(baseSegment.p1.x, baseSegment.p1.y);
+                const p2 = getBoardPixel(baseSegment.p2.x, baseSegment.p2.y);
+                const corner = getBoardPixel(baseSegment.p2.x, baseSegment.p1.y); // Corner of right triangle
+
+                // Draw Dashed Green Triangle legs
+                drawDashedLine(hg, p1.px, p1.py, corner.px, corner.py, COLOR_HINT_TRIANGLE, 3, [6, 4]);
+                drawDashedLine(hg, corner.px, corner.py, p2.px, p2.py, COLOR_HINT_TRIANGLE, 3, [6, 4]);
+
+                // Fill right-angle corner indicator
+                const sqSize = Math.min(12, pegSpacing * 0.25);
+                const signX = baseSegment.p1.x > baseSegment.p2.x ? 1 : -1;
+                const signY = baseSegment.p2.y > baseSegment.p1.y ? -1 : 1;
+                
+                hg.lineStyle(1.5, COLOR_HINT_TRIANGLE, 0.8);
+                hg.moveTo(corner.px + signX * sqSize, corner.py);
+                hg.lineTo(corner.px + signX * sqSize, corner.py + signY * sqSize);
+                hg.lineTo(corner.px, corner.py + signY * sqSize);
+            }
+
+            // 2. Draw Initial Base Slanted Segment
+            if (baseSegment) {
+                const p1 = getBoardPixel(baseSegment.p1.x, baseSegment.p1.y);
+                const p2 = getBoardPixel(baseSegment.p2.x, baseSegment.p2.y);
+
+                lg.lineStyle(5, COLOR_BASE_LINE, 0.9);
+                lg.moveTo(p1.px, p1.py);
+                lg.lineTo(p2.px, p2.py);
+            }
+
+            // 3. Draw User Active Lines
+            activeLines.forEach(line => {
+                const p1 = getBoardPixel(line.p1.x, line.p1.y);
+                const p2 = getBoardPixel(line.p2.x, line.p2.y);
+
+                lg.lineStyle(4, COLOR_USER_LINE, 1);
+                lg.moveTo(p1.px, p1.py);
+                lg.lineTo(p2.px, p2.py);
+            });
+
+            // 4. Draw Active Dragging Line Preview
+            if (selectedPeg && hoveredPeg) {
+                const p1 = getBoardPixel(selectedPeg.x, selectedPeg.y);
+                const p2 = getBoardPixel(hoveredPeg.x, hoveredPeg.y);
+
+                lg.lineStyle(2, COLOR_PEG_HOVER, 0.6);
+                lg.moveTo(p1.px, p1.py);
+                lg.lineTo(p2.px, p2.py);
+            }
+
+            linesContainer.addChild(lg);
+            hintContainer.addChild(hg);
+        }
+
+        // Custom Helper: Draw Dashed Line in PixiJS
+        function drawDashedLine(g, x1, y1, x2, y2, color, width, dashPattern = [8, 5]) {
+            g.lineStyle(width, color, 0.95);
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const len = Math.hypot(dx, dy);
+            const normalX = dx / len;
+            const normalY = dy / len;
+
+            let progress = 0;
+            let draw = true;
+            let patternIdx = 0;
+
+            while (progress < len) {
+                const dashLen = dashPattern[patternIdx % dashPattern.length];
+                const nextProgress = Math.min(progress + dashLen, len);
+
+                if (draw) {
+                    g.moveTo(x1 + normalX * progress, y1 + normalY * progress);
+                    g.lineTo(x1 + normalX * nextProgress, y1 + normalY * nextProgress);
+                }
+
+                progress = nextProgress;
+                draw = !draw;
+                patternIdx++;
+            }
+        }
+
+        function setupUIControls() {
+            // Mode Buttons
+            const btnPractice = document.getElementById('btn-mode-practice');
+            const btnChallenge = document.getElementById('btn-mode-challenge');
+
+            btnPractice.addEventListener('click', () => {
+                if (currentMode === 'practice') return;
+                currentMode = 'practice';
+                btnPractice.classList.add('neon-btn-cyan', 'active');
+                btnPractice.classList.remove('neon-btn-magenta');
+                btnChallenge.classList.add('neon-btn-magenta');
+                btnChallenge.classList.remove('neon-btn-cyan', 'active');
+                startNewRound();
+            });
+
+            btnChallenge.addEventListener('click', () => {
+                if (currentMode === 'challenge') return;
+                currentMode = 'challenge';
+                btnChallenge.classList.add('neon-btn-magenta', 'active');
+                btnChallenge.classList.remove('neon-btn-cyan');
+                btnPractice.classList.add('neon-btn-cyan');
+                btnPractice.classList.remove('neon-btn-magenta', 'active');
+                startNewRound();
+            });
+
+            // Action Buttons
+            document.getElementById('btn-undo').addEventListener('click', () => {
+                if (activeLines.length > 0) {
+                    audioEngine.playSnap();
+                    activeLines.pop();
+                    updateStatusCounter();
+                    renderAllGraphics();
+                }
+            });
+
+            document.getElementById('btn-clear').addEventListener('click', () => {
+                if (activeLines.length > 0) {
+                    audioEngine.playSnap();
+                    activeLines = [];
+                    updateStatusCounter();
+                    renderAllGraphics();
+                }
+            });
+
+            document.getElementById('btn-next').addEventListener('click', () => {
+                audioEngine.playSnap();
+                startNewRound();
+            });
+
+            document.getElementById('btn-modal-next').addEventListener('click', () => {
+                hideVictoryModal();
+                startNewRound();
+            });
+
+            // Audio Toggle Button
+            const soundBtn = document.getElementById('btn-sound-toggle');
+            soundBtn.addEventListener('click', () => {
+                audioEngine.enabled = !audioEngine.enabled;
+                soundBtn.innerText = audioEngine.enabled ? '🔊 SOUND ON' : '🔇 MUTE';
+                soundBtn.classList.toggle('text-cyan-400');
+                soundBtn.classList.toggle('text-slate-500');
+            });
+        }
+
+        // Initialize application on page load
+        window.onload = function () {
+            initPixiApp();
+            setupUIControls();
+        };
+    </script>
+</body>
+</html>
