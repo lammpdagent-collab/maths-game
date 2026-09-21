@@ -592,12 +592,18 @@
 
             targetLengthSq = getDistSq(p1, p2);
 
-            // Find all possible grid points P from designatedStart such that distSq(designatedStart, P) == targetLengthSq (excluding otherEnd)
+            // Find all possible grid points P from designatedStart such that distSq(designatedStart, P) == targetLengthSq
+            // (excluding otherEnd; only DIAGONAL segments count — same row/column
+            // points are excluded because the game asks for 斜線段, and including
+            // them made 3-4/4-3 length-5 problems unsolvable-looking: the horizontal
+            // /vertical 5-peg points inflated the target count)
             validTargets = [];
             for (let x = 0; x < GRID_SIZE; x++) {
                 for (let y = 0; y < GRID_SIZE; y++) {
                     const testPt = { x, y };
                     if (isSamePoint(testPt, designatedStart) || isSamePoint(testPt, otherEnd)) continue;
+                    // Exclude same-column / same-row points (not diagonal)
+                    if (testPt.x === designatedStart.x || testPt.y === designatedStart.y) continue;
 
                     if (getDistSq(designatedStart, testPt) === targetLengthSq) {
                         validTargets.push(testPt);
