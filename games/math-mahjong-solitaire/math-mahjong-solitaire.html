@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數和上海 - Math Mahjong Solitaire</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- PixiJS v7 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+
+    <!-- Google Fonts for Chinese Style Aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Zhi+Mang+Xing&family=Noto+Serif+TC:wght@500;700;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Serif TC', serif;
+            background-color: #2b2622;
+            color: #f3eae1;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        .font-calligraphy {
+            font-family: 'Zhi Mang Xing', cursive;
+        }
+
+        .font-pixel {
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        /* Pixel style Chinese Frame & Shadows */
+        .chinese-border {
+            border: 4px solid #8c3a2b;
+            box-shadow: 0 0 0 4px #e2c08d, 0 8px 20px rgba(0,0,0,0.6);
+        }
+
+        .wood-panel {
+            background: linear-gradient(135deg, #3d2f25 0%, #291d15 100%);
+            border: 2px solid #5a4638;
+        }
+
+        .btn-chinese {
+            background: linear-gradient(180deg, #a84332 0%, #7a2b1d 100%);
+            border: 2px solid #e2c08d;
+            box-shadow: 0 4px 0 #4a180f;
+            transition: all 0.1s ease;
+        }
+
+        .btn-chinese:hover {
+            background: linear-gradient(180deg, #b94d3a 0%, #8c3222 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #4a180f;
+        }
+
+        .btn-chinese:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #4a180f;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(180deg, #4a5d4e 0%, #2f3d32 100%);
+            border: 2px solid #a3b899;
+            box-shadow: 0 4px 0 #1b261e;
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(180deg, #586e5d 0%, #3a4b3e 100%);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #2b2622;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #8c3a2b;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between items-center bg-[#1e1a17] text-[#f2e6d8]">
+
+    <!-- Top Navigation Header -->
+    <header class="w-full max-w-7xl px-4 py-3 flex flex-wrap justify-between items-center z-10 border-b-2 border-[#5a4638] bg-[#29221c]/90 backdrop-blur-md">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-[#8c3a2b] border-2 border-[#e2c08d] rounded flex items-center justify-center shadow-lg">
+                <span class="text-2xl font-calligraphy text-[#f3eae1]">拾</span>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold tracking-wider text-[#e2c08d] font-calligraphy leading-none">數和上海</h1>
+                <p class="text-xs text-[#a89887] tracking-widest mt-1">MATH MAHJONG SOLITAIRE</p>
+            </div>
+        </div>
+
+        <!-- Difficulty Selector -->
+        <div class="flex items-center space-x-2 my-2 sm:my-0">
+            <span class="text-xs text-[#c4b5a5] font-bold mr-1">難度:</span>
+            <button id="btn-easy" onclick="setDifficulty('easy')" class="px-3 py-1 text-xs rounded border border-[#8c3a2b] bg-[#8c3a2b] text-[#f3eae1] font-bold transition">低階 (1-9合十)</button>
+            <button id="btn-medium" onclick="setDifficulty('medium')" class="px-3 py-1 text-xs rounded border border-[#5a4638] bg-[#3a2e25] text-[#a89887] hover:text-white font-bold transition">中階 (+0, 括號)</button>
+            <button id="btn-hard" onclick="setDifficulty('hard')" class="px-3 py-1 text-xs rounded border border-[#5a4638] bg-[#3a2e25] text-[#a89887] hover:text-white font-bold transition">高階 (+四則運算)</button>
+        </div>
+
+        <!-- Stats Display -->
+        <div class="flex items-center space-x-6 text-sm">
+            <div class="text-center">
+                <div class="text-[10px] text-[#a89887] tracking-wider">剩餘牌數</div>
+                <div id="stat-tiles" class="text-lg font-bold text-[#e2c08d] font-pixel">0</div>
+            </div>
+            <div class="text-center">
+                <div class="text-[10px] text-[#a89887] tracking-wider">得分</div>
+                <div id="stat-score" class="text-lg font-bold text-[#a3b899] font-pixel">0</div>
+            </div>
+            <div class="text-center">
+                <div class="text-[10px] text-[#a89887] tracking-wider">時間</div>
+                <div id="stat-timer" class="text-lg font-bold text-[#d9a05b] font-pixel">00:00</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Canvas Container -->
+    <main class="relative flex-1 w-full max-w-7xl flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+        <div id="canvas-container" class="relative w-full h-full flex items-center justify-center rounded-lg overflow-hidden border-2 border-[#42342b] shadow-2xl bg-[#181412]">
+            <!-- PixiJS Canvas injects here -->
+        </div>
+
+        <!-- Quick Matching Rules Legend Floating Box -->
+        <div class="absolute bottom-4 left-4 bg-[#29221c]/90 border border-[#5a4638] rounded-lg p-3 backdrop-blur-md text-xs text-[#d4c5b5] max-w-xs shadow-xl hidden sm:block">
+            <div class="font-bold text-[#e2c08d] mb-1 flex items-center">
+                <span class="mr-1">📜</span> 相消規則指引:
+            </div>
+            <ul id="rule-guide-list" class="space-y-1 list-disc list-inside text-[11px] text-[#b8a898]">
+                <!-- Dynamic based on difficulty -->
+            </ul>
+        </div>
+    </main>
+
+    <!-- Bottom Action Controls -->
+    <footer class="w-full max-w-7xl px-4 py-3 flex justify-between items-center bg-[#29221c] border-t-2 border-[#5a4638]">
+        <div class="flex items-center space-x-2">
+            <button onclick="toggleAudio()" id="btn-audio" class="px-3 py-1.5 rounded text-xs font-bold bg-[#3d2f25] border border-[#5a4638] hover:border-[#e2c08d] text-[#e2c08d] flex items-center transition">
+                <span id="audio-icon" class="mr-1">🔊</span> 音效: 開
+            </button>
+            <button onclick="showRulesModal()" class="px-3 py-1.5 rounded text-xs font-bold bg-[#3d2f25] border border-[#5a4638] hover:border-[#e2c08d] text-[#d4c5b5] transition">
+                ❓ 玩法說明
+            </button>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <button onclick="useUndo()" id="btn-undo" class="btn-secondary px-4 py-2 rounded text-xs font-bold text-[#f3eae1] flex items-center">
+                ↩️ 復原 (<span id="undo-count">3</span>)
+            </button>
+            <button onclick="useHint()" id="btn-hint" class="btn-secondary px-4 py-2 rounded text-xs font-bold text-[#f3eae1] flex items-center">
+                💡 提示 (<span id="hint-count">3</span>)
+            </button>
+            <button onclick="shuffleTiles()" id="btn-shuffle" class="btn-secondary px-4 py-2 rounded text-xs font-bold text-[#f3eae1] flex items-center">
+                🔀 重新洗牌 (<span id="shuffle-count">2</span>)
+            </button>
+            <button onclick="restartGame()" class="btn-chinese px-5 py-2 rounded text-xs font-bold text-[#f3eae1] flex items-center">
+                🔄 重置局數
+            </button>
+        </div>
+    </footer>
+
+    <!-- Modal: Rules & Guide -->
+    <div id="modal-rules" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="wood-panel chinese-border rounded-lg max-w-md w-full p-6 text-[#f3eae1] relative">
+            <h2 class="text-2xl font-bold font-calligraphy text-[#e2c08d] mb-4 text-center border-b border-[#5a4638] pb-2">數學上海牌 - 規則指南</h2>
+            
+            <div class="space-y-3 text-sm text-[#d4c5b5] max-h-96 overflow-y-auto pr-2">
+                <p><b class="text-[#e2c08d]">基本玩法：</b> 點擊選取最上層且左右至少有一側未被擋住的「自由牌」。連續點擊兩張符合數學規律的牌即可消除。</p>
+                
+                <div class="bg-[#1e1a17] p-3 rounded border border-[#5a4638] space-y-2 text-xs">
+                    <p class="font-bold text-[#a3b899]">相消對應條件：</p>
+                    <p>1. <span class="text-[#e2c08d] font-bold">合十相消：</span> 1與9, 2與8, 3與7, 4與6, 5與5。</p>
+                    <p>2. <span class="text-[#e2c08d] font-bold">零的特殊牌：</span> 0 只能與 0 相消。</p>
+                    <p>3. <span class="text-[#e2c08d] font-bold">括號對應：</span> 開括號「(」 與 閂括號「)」 相消。</p>
+                    <p>4. <span class="text-[#e2c08d] font-bold">逆運算對應：</span> 加號「+」 與 減號「-」 相消；乘號「×」 與 除號「÷」 相消。</p>
+                </div>
+
+                <div class="text-xs text-[#a89887] space-y-1">
+                    <p>• 低階難度：僅含 1 至 9 的合十牌。</p>
+                    <p>• 中階難度：包含 0 至 9 與括號對應。</p>
+                    <p>• 高階難度：包含 0 至 9、括號與四則運算符號。</p>
+                </div>
+            </div>
+
+            <div class="mt-6 text-center">
+                <button onclick="closeRulesModal()" class="btn-chinese px-6 py-2 rounded font-bold text-sm">明白，開始遊戲</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Victory / Game Over Overlay -->
+    <div id="modal-victory" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center hidden p-4">
+        <div class="wood-panel chinese-border rounded-lg max-w-sm w-full p-6 text-center">
+            <div class="text-5xl mb-2">🎉</div>
+            <h2 class="text-3xl font-bold font-calligraphy text-[#e2c08d] mb-1">大獲全勝！</h2>
+            <p class="text-xs text-[#a89887] mb-4">MATCH MAHJONG CLEARED</p>
+            
+            <div class="bg-[#181412] p-4 rounded border border-[#5a4638] space-y-2 mb-6">
+                <div class="flex justify-between text-xs">
+                    <span class="text-[#a89887]">最終得分：</span>
+                    <span id="final-score" class="font-bold text-[#a3b899] font-pixel">0</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                    <span class="text-[#a89887]">耗時：</span>
+                    <span id="final-time" class="font-bold text-[#d9a05b] font-pixel">00:00</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                    <span class="text-[#a89887]">剩餘提示/洗牌獎勵：</span>
+                    <span id="final-bonus" class="font-bold text-[#e2c08d] font-pixel">+0</span>
+                </div>
+            </div>
+
+            <button onclick="restartGame(); closeVictoryModal();" class="btn-chinese px-6 py-2.5 rounded font-bold text-sm w-full">
+                再玩一局
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /* Audio Synthesizer Engine using Web Audio API */
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function toggleAudio() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('audio-icon').innerText = soundEnabled ? '🔊' : '🔇';
+            document.getElementById('btn-audio').childNodes[1].nodeValue = soundEnabled ? ' 音效: 開' : ' 音效: 關';
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            initAudio();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'select') {
+                // Soft wood tile click
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(120, now + 0.06);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.06);
+            } else if (type === 'match') {
+                // Pentatonic Chinese chime (C5 - G5 - C6)
+                [523.25, 783.99, 1046.50].forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+                    gain.gain.setValueAtTime(0.25, now + idx * 0.07);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.35);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + idx * 0.07);
+                    osc.stop(now + idx * 0.07 + 0.35);
+                });
+            } else if (type === 'invalid') {
+                // Low invalid error warning buzz sound
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(110, now + 0.18);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.18);
+            } else if (type === 'win') {
+                // Chinese victory flourish
+                const notes = [523.25, 659.25, 783.99, 880.00, 1046.50, 1318.51];
+                notes.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                    gain.gain.setValueAtTime(0.3, now + idx * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.4);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + idx * 0.1);
+                    osc.stop(now + idx * 0.1 + 0.4);
+                });
+            } else if (type === 'shuffle') {
+                // Shuffle tiles sound
+                for (let i = 0; i < 5; i++) {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(200 + Math.random() * 200, now + i * 0.04);
+                    gain.gain.setValueAtTime(0.15, now + i * 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.04 + 0.05);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + i * 0.04);
+                    osc.stop(now + i * 0.04 + 0.05);
+                }
+            }
+        }
+    </script>
+
+    <script>
+        /* Constants & Configuration */
+        const TILE_WIDTH = 52;
+        const TILE_HEIGHT = 68;
+        const TILE_DEPTH = 8; // Z-axis offset projection
+
+        // Colors palette (Chinese Soft Pastel Theme)
+        const PALETTE = {
+            tileFace: 0xF7F3E9,      // Soft ivory parchment
+            tileSide: 0x88A08A,      // Soft sage green jade
+            tileShadow: 0x1A1412,    // Deep shadow
+            borderGold: 0xD4AF37,    // Warm imperial gold
+            borderDark: 0x5A4638,    // Dark timber wood
+            textNavy: 0x2B2D42,      // Deep ink navy
+            textRed: 0xBC4749,       // Cinnabar red
+            textGreen: 0x386641,     // Jade green
+            textGold: 0xB5838D,      // Soft mulberry
+            selectGlow: 0xE0A96D,    // Warm amber glow
+            hintGlow: 0x70E498       // Emerald hint aura
+        };
+
+        let currentDifficulty = 'easy';
+        let app = null;
+        let gameBoardContainer = null;
+        let effectsContainer = null;
+
+        let tilesList = [];
+        let selectedTile = null;
+        let score = 0;
+        let timeElapsed = 0;
+        let timerInterval = null;
+        
+        let hintCount = 3;
+        let undoCount = 3;
+        let shuffleCount = 2;
+        let historyStack = [];
+
+        // Dynamic Rule List for Modal/Guide
+        const RULE_GUIDES = {
+            easy: [
+                "數字牌 (1-9): 兩數相加等於 10 即可相消 (如 1與9, 2與8, 5與5)"
+            ],
+            medium: [
+                "數字牌 (1-9): 兩數相加等於 10 相消",
+                "零號牌 (0): 0 只能與 0 相消",
+                "括號牌: 開括號「(」 與 閂括號「)」 相消"
+            ],
+            hard: [
+                "數字牌 (1-9): 兩數相加等於 10 相消",
+                "零號牌 (0): 0 只能與 0 相消",
+                "括號牌: 開括號「(」 與 閂括號「)」 相消",
+                "四則運算: 加號「+」與減號「-」相消；乘號「×」與除號「÷」相消"
+            ]
+        };
+
+        window.onload = function() {
+            const container = document.getElementById('canvas-container');
+            
+            app = new PIXI.Application({
+                width: container.clientWidth,
+                height: container.clientHeight,
+                backgroundColor: 0x181412,
+                resolution: window.devicePixelRatio || 1,
+                autoDensity: true,
+                antialias: true
+            });
+
+            container.appendChild(app.view);
+
+            gameBoardContainer = new PIXI.Container();
+            effectsContainer = new PIXI.Container();
+
+            app.stage.addChild(gameBoardContainer);
+            app.stage.addChild(effectsContainer);
+
+            window.addEventListener('resize', onWindowResize);
+
+            // Initialize Easy Mode by default
+            setDifficulty('easy');
+        };
+
+        function onWindowResize() {
+            if (!app) return;
+            const container = document.getElementById('canvas-container');
+            app.renderer.resize(container.clientWidth, container.clientHeight);
+            centerBoard();
+        }
+
+        function centerBoard() {
+            if (!gameBoardContainer) return;
+            // Center the entire board container inside viewport
+            const bounds = gameBoardContainer.getLocalBounds();
+            gameBoardContainer.x = (app.screen.width - bounds.width) / 2 - bounds.x;
+            gameBoardContainer.y = (app.screen.height - bounds.height) / 2 - bounds.y;
+        }
+
+        function canMatchValues(valA, valB) {
+            const numA = parseInt(valA);
+            const numB = parseInt(valB);
+
+            // Check numbers 0-9
+            if (!isNaN(numA) && !isNaN(numB)) {
+                if (numA === 0 && numB === 0) return true;
+                if (numA >= 1 && numA <= 9 && numB >= 1 && numB <= 9) {
+                    return numA + numB === 10;
+                }
+                return false;
+            }
+
+            // Check brackets
+            if ((valA === '(' && valB === ')') || (valA === ')' && valB === '(')) return true;
+
+            // Check operators
+            if ((valA === '+' && valB === '-') || (valA === '-' && valB === '+')) return true;
+            if ((valA === '×' && valB === '÷') || (valA === '÷' && valB === '×')) return true;
+
+            return false;
+        }
+
+        // Get layout coordinates (c, r, z) - column, row, layer
+        function getLayoutPositions(difficulty) {
+            const positions = [];
+
+            if (difficulty === 'easy') {
+                // 36 tiles - Compact Turtle Pyramid
+                // Layer 0: 6x4 = 24
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 6; c++) {
+                        positions.push({ c: c * 2, r: r * 2, z: 0 });
+                    }
+                }
+                // Layer 1: 4x2 = 8
+                for (let r = 1; r < 3; r++) {
+                    for (let c = 1; c < 5; c++) {
+                        positions.push({ c: c * 2, r: r * 2, z: 1 });
+                    }
+                }
+                // Layer 2: 2x2 = 4
+                for (let r = 1; r < 3; r++) {
+                    for (let c = 2; c < 4; c++) {
+                        positions.push({ c: c * 2, r: r * 2, z: 2 });
+                    }
+                }
+            } else if (difficulty === 'medium') {
+                // 64 tiles - Shanghai Wings
+                // Layer 0: 8x6 = 48
+                for (let r = 0; r < 6; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        // Skip corners for elegant shape
+                        if ((r===0 && (c===0||c===7)) || (r===5 && (c===0||c===7))) continue;
+                        positions.push({ c: c * 2, r: r * 2, z: 0 });
+                    }
+                }
+                // Layer 1: 4x4 = 16
+                for (let r = 1; r < 5; r++) {
+                    for (let c = 2; c < 6; c++) {
+                        positions.push({ c: c * 2, r: r * 2, z: 1 });
+                    }
+                }
+                // Layer 2: 2x2 = 4
+                for (let r = 2; r < 4; r++) {
+                    for (let c = 3; c < 5; c++) {
+                        positions.push({ c: c * 2, r: r * 2, z: 2 });
+                    }
+                }
+            } else { // Hard Mode
+                // 96 tiles - Traditional Chinese Dragon Fortress
+                // Layer 0: 10x7 (70 tiles - minus corners)
+                for (let r = 0; r < 7; r++) {
+                    for (let c = 0; c < 10; c++) {
+                        if ((r === 0 || r === 6) && (c < 2 || c > 7)) continue;
+                        positions.push({ c: c * 2, r: r * 2, z: 0 });
+                    }
+                }
+                // Layer 1: 6x4 = 24
+                for (let r = 1; r < 5; r++) {
+                    for (let c = 2; c < 8; c++) {
+                        positions.push({ c: c * 2, r: r * 2, z: 1 });
+                    }
+                }
+                // Layer 2: 4x2 = 8
+                for (let r = 2; r < 4; r++) {
+                    for (let c = 3; c < 7; c++) {
+                        positions.push({ c: c * 2, r: r * 2, z: 2 });
+                    }
+                }
+                // Layer 3: Top Crown = 2
+                positions.push({ c: 8, r: 5, z: 3 });
+                positions.push({ c: 10, r: 5, z: 3 });
+            }
+
+            // Ensure total count is EVEN
+            if (positions.length % 2 !== 0) {
+                positions.pop();
+            }
+
+            return positions;
+        }
+
+        // Generate matching pair values
+        function generatePairs(totalPairs, difficulty) {
+            const pairs = [];
+            
+            // Pool definitions based on difficulty
+            const numPairsList = [
+                ['1', '9'], ['2', '8'], ['3', '7'], ['4', '6'], ['5', '5']
+            ];
+            const mediumList = [
+                ...numPairsList,
+                ['0', '0'],
+                ['(', ')']
+            ];
+            const hardList = [
+                ...mediumList,
+                ['+', '-'],
+                ['×', '÷']
+            ];
+
+            let activePool = numPairsList;
+            if (difficulty === 'medium') activePool = mediumList;
+            if (difficulty === 'hard') activePool = hardList;
+
+            for (let i = 0; i < totalPairs; i++) {
+                const randomPair = activePool[Math.floor(Math.random() * activePool.length)];
+                pairs.push(randomPair[0], randomPair[1]);
+            }
+
+            // Shuffle pool values
+            for (let i = pairs.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+            }
+
+            return pairs;
+        }
+
+        function createTileSprite(val, pos) {
+            const container = new PIXI.Container();
+            container.x = pos.c * (TILE_WIDTH / 2) + pos.z * TILE_DEPTH;
+            container.y = pos.r * (TILE_HEIGHT / 2) - pos.z * TILE_DEPTH;
+            
+            // Store meta data
+            container.gridC = pos.c;
+            container.gridR = pos.r;
+            container.gridZ = pos.z;
+            container.tileVal = val;
+            container.isFree = false;
+            container.isSelected = false;
+
+            // Draw Tile Base Graphic
+            const g = new PIXI.Graphics();
+            
+            // Draw 3D Side/Bottom depth (walnut/jade shadow)
+            g.beginFill(PALETTE.tileSide);
+            g.drawRoundedRect(0, TILE_DEPTH, TILE_WIDTH, TILE_HEIGHT, 6);
+            g.endFill();
+
+            // Draw Face Surface
+            g.beginFill(PALETTE.tileFace);
+            g.drawRoundedRect(0, 0, TILE_WIDTH, TILE_HEIGHT, 6);
+            g.endFill();
+
+            // Inner subtle double-border for Chinese tile aesthetic
+            g.lineStyle(1.5, PALETTE.borderGold, 0.8);
+            g.drawRoundedRect(3, 3, TILE_WIDTH - 6, TILE_HEIGHT - 6, 4);
+
+            g.lineStyle(1, PALETTE.borderDark, 0.3);
+            g.drawRoundedRect(5, 5, TILE_WIDTH - 10, TILE_HEIGHT - 10, 3);
+
+            container.addChild(g);
+            container.baseGraphic = g;
+
+            // Create Glow Selection/Hint Graphics Overlay
+            const glow = new PIXI.Graphics();
+            glow.visible = false;
+            container.addChild(glow);
+            container.glowGraphic = glow;
+
+            // Symbol Color based on type
+            let textColor = PALETTE.textNavy;
+            if (['+', '-', '×', '÷'].includes(val)) textColor = PALETTE.textRed;
+            if (['(', ')'].includes(val)) textColor = PALETTE.textGreen;
+            if (val === '0') textColor = PALETTE.textGold;
+
+            // Create Text Symbol
+            const style = new PIXI.TextStyle({
+                fontFamily: 'Noto Serif TC, Zhi Mang Xing, serif',
+                fontSize: 28,
+                fontWeight: '900',
+                fill: textColor,
+                dropShadow: true,
+                dropShadowColor: '#ffffff',
+                dropShadowDistance: 1,
+                dropShadowAlpha: 0.5
+            });
+
+            const text = new PIXI.Text(val, style);
+            text.anchor.set(0.5);
+            text.x = TILE_WIDTH / 2;
+            text.y = TILE_HEIGHT / 2 - 1;
+            container.addChild(text);
+
+            // Make Interactive
+            container.eventMode = 'static';
+            container.cursor = 'pointer';
+
+            container.on('pointerdown', () => onTileClick(container));
+
+            return container;
+        }
+
+        function updateFreeStates() {
+            tilesList.forEach(tile => {
+                if (!tile.parent) return;
+
+                // Check 1: Top tile blocking?
+                // A tile above exists if any tile at z + 1 overlaps in grid coords
+                const isBlockedTop = tilesList.some(other => {
+                    if (!other.parent || other === tile) return false;
+                    if (other.gridZ === tile.gridZ + 1) {
+                        return Math.abs(other.gridC - tile.gridC) < 2 && Math.abs(other.gridR - tile.gridR) < 2;
+                    }
+                    return false;
+                });
+
+                // Check 2: Left side blocking?
+                const isBlockedLeft = tilesList.some(other => {
+                    if (!other.parent || other === tile) return false;
+                    if (other.gridZ === tile.gridZ && other.gridR === tile.gridR) {
+                        return other.gridC === tile.gridC - 2;
+                    }
+                    return false;
+                });
+
+                // Check 3: Right side blocking?
+                const isBlockedRight = tilesList.some(other => {
+                    if (!other.parent || other === tile) return false;
+                    if (other.gridZ === tile.gridZ && other.gridR === tile.gridR) {
+                        return other.gridC === tile.gridC + 2;
+                    }
+                    return false;
+                });
+
+                // Free if NOT top blocked AND (NOT left blocked OR NOT right blocked)
+                tile.isFree = !isBlockedTop && (!isBlockedLeft || !isBlockedRight);
+
+                // Visual shade update for non-free tiles
+                if (!tile.isFree) {
+                    tile.alpha = 0.7;
+                } else {
+                    tile.alpha = 1.0;
+                }
+            });
+        }
+
+        function onTileClick(tile) {
+            if (!tile.isFree) {
+                playSound('invalid');
+                showTileShake(tile);
+                return;
+            }
+
+            playSound('select');
+
+            // If clicking same selected tile -> Deselect
+            if (selectedTile === tile) {
+                deselectTile(tile);
+                selectedTile = null;
+                return;
+            }
+
+            // If no previous tile selected -> Select this tile
+            if (!selectedTile) {
+                selectedTile = tile;
+                highlightTile(tile, PALETTE.selectGlow);
+                return;
+            }
+
+            // A second free tile was clicked! Check matching validity
+            const firstTile = selectedTile;
+
+            if (canMatchValues(firstTile.tileVal, tile.tileVal)) {
+                // VALID MATCH!
+                playSound('match');
+                deselectTile(firstTile);
+                selectedTile = null;
+
+                // Execute connection beam effect
+                drawConnectionBeam(firstTile, tile, () => {
+                    // Record undo history
+                    historyStack.push([firstTile, tile]);
+
+                    // Remove tiles from stage
+                    gameBoardContainer.removeChild(firstTile);
+                    gameBoardContainer.removeChild(tile);
+
+                    updateFreeStates();
+                    updateStats(100);
+
+                    // Check win condition
+                    const remainingTiles = tilesList.filter(t => t.parent).length;
+                    document.getElementById('stat-tiles').innerText = remainingTiles;
+
+                    if (remainingTiles === 0) {
+                        triggerVictory();
+                    } else {
+                        checkNoMovesWarning();
+                    }
+                });
+            } else {
+                // INVALID MATCH!
+                playSound('invalid');
+                showTileShake(firstTile);
+                showTileShake(tile);
+                deselectTile(firstTile);
+                selectedTile = null;
+            }
+        }
+
+        function highlightTile(tile, glowColor) {
+            tile.isSelected = true;
+            tile.glowGraphic.clear();
+            tile.glowGraphic.lineStyle(3, glowColor, 1);
+            tile.glowGraphic.drawRoundedRect(-2, -2, TILE_WIDTH + 4, TILE_HEIGHT + 4, 8);
+            tile.glowGraphic.visible = true;
+            
+            // Lift tile up slightly
+            tile.y -= 4;
+        }
+
+        function deselectTile(tile) {
+            if (!tile) return;
+            tile.isSelected = false;
+            tile.glowGraphic.visible = false;
+            tile.y = tile.gridR * (TILE_HEIGHT / 2) - tile.gridZ * TILE_DEPTH;
+        }
+
+        function showTileShake(tile) {
+            const startX = tile.x;
+            let count = 0;
+            const interval = setInterval(() => {
+                tile.x = startX + (count % 2 === 0 ? 3 : -3);
+                count++;
+                if (count > 5) {
+                    clearInterval(interval);
+                    tile.x = startX;
+                }
+            }, 30);
+        }
+
+        function drawConnectionBeam(tileA, tileB, onComplete) {
+            const g = new PIXI.Graphics();
+            effectsContainer.addChild(g);
+
+            const globalA = tileA.getGlobalPosition();
+            const globalB = tileB.getGlobalPosition();
+
+            const posA = { x: globalA.x + TILE_WIDTH / 2, y: globalA.y + TILE_HEIGHT / 2 };
+            const posB = { x: globalB.x + TILE_WIDTH / 2, y: globalB.y + TILE_HEIGHT / 2 };
+
+            let progress = 0;
+            const duration = 15; // frames
+
+            const animTicker = () => {
+                progress++;
+                const ratio = progress / duration;
+
+                g.clear();
+                
+                // Outer glowing beam
+                g.lineStyle(6, 0xE0A96D, 0.8 * (1 - ratio));
+                g.moveTo(posA.x, posA.y);
+                g.lineTo(posB.x, posB.y);
+
+                // Inner core laser
+                g.lineStyle(2, 0xFFFFFF, 1.0 * (1 - ratio));
+                g.moveTo(posA.x, posA.y);
+                g.lineTo(posB.x, posB.y);
+
+                // Particle sparks at ends
+                g.beginFill(0xF3EAE1, 1 - ratio);
+                g.drawCircle(posA.x, posA.y, 8 * (1 + ratio));
+                g.drawCircle(posB.x, posB.y, 8 * (1 + ratio));
+                g.endFill();
+
+                if (progress >= duration) {
+                    app.ticker.remove(animTicker);
+                    effectsContainer.removeChild(g);
+                    g.destroy();
+                    if (onComplete) onComplete();
+                }
+            };
+
+            app.ticker.add(animTicker);
+        }
+
+        function useHint() {
+            if (hintCount <= 0) return;
+
+            // Find first available valid pair
+            const freeTiles = tilesList.filter(t => t.parent && t.isFree);
+            let pair = null;
+
+            for (let i = 0; i < freeTiles.length; i++) {
+                for (let j = i + 1; j < freeTiles.length; j++) {
+                    if (canMatchValues(freeTiles[i].tileVal, freeTiles[j].tileVal)) {
+                        pair = [freeTiles[i], freeTiles[j]];
+                        break;
+                    }
+                }
+                if (pair) break;
+            }
+
+            if (pair) {
+                hintCount--;
+                document.getElementById('hint-count').innerText = hintCount;
+
+                highlightTile(pair[0], PALETTE.hintGlow);
+                highlightTile(pair[1], PALETTE.hintGlow);
+
+                setTimeout(() => {
+                    deselectTile(pair[0]);
+                    deselectTile(pair[1]);
+                }, 1800);
+            } else {
+                playSound('invalid');
+                alert('當前無可消除組合，請使用重新洗牌！');
+            }
+        }
+
+        function shuffleTiles() {
+            if (shuffleCount <= 0) return;
+
+            playSound('shuffle');
+            shuffleCount--;
+            document.getElementById('shuffle-count').innerText = shuffleCount;
+
+            const activeTiles = tilesList.filter(t => t.parent);
+            const activeValues = activeTiles.map(t => t.tileVal);
+
+            // Shuffle values array
+            for (let i = activeValues.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [activeValues[i], activeValues[j]] = [activeValues[j], activeValues[i]];
+            }
+
+            // Re-assign values & re-render tile texts
+            activeTiles.forEach((tile, idx) => {
+                tile.tileVal = activeValues[idx];
+                
+                // Rebuild text child
+                const textChild = tile.children.find(c => c instanceof PIXI.Text);
+                if (textChild) {
+                    textChild.text = activeValues[idx];
+                    
+                    let textColor = PALETTE.textNavy;
+                    if (['+', '-', '×', '÷'].includes(tile.tileVal)) textColor = PALETTE.textRed;
+                    if (['(', ')'].includes(tile.tileVal)) textColor = PALETTE.textGreen;
+                    if (tile.tileVal === '0') textColor = PALETTE.textGold;
+                    textChild.style.fill = textColor;
+                }
+            });
+
+            if (selectedTile) deselectTile(selectedTile);
+            selectedTile = null;
+
+            updateFreeStates();
+        }
+
+        function useUndo() {
+            if (undoCount <= 0 || historyStack.length === 0) return;
+
+            undoCount--;
+            document.getElementById('undo-count').innerText = undoCount;
+
+            const lastPair = historyStack.pop();
+            const tileA = lastPair[0];
+            const tileB = lastPair[1];
+
+            gameBoardContainer.addChild(tileA);
+            gameBoardContainer.addChild(tileB);
+
+            // Re-sort container depth rendering
+            sortBoardZOrder();
+
+            updateFreeStates();
+
+            // Update stats
+            score = Math.max(0, score - 80);
+            document.getElementById('stat-score').innerText = score;
+            document.getElementById('stat-tiles').innerText = tilesList.filter(t => t.parent).length;
+        }
+
+        function checkNoMovesWarning() {
+            const freeTiles = tilesList.filter(t => t.parent && t.isFree);
+            let hasPair = false;
+
+            for (let i = 0; i < freeTiles.length; i++) {
+                for (let j = i + 1; j < freeTiles.length; j++) {
+                    if (canMatchValues(freeTiles[i].tileVal, freeTiles[j].tileVal)) {
+                        hasPair = true;
+                        break;
+                    }
+                }
+                if (hasPair) break;
+            }
+
+            if (!hasPair && freeTiles.length > 0) {
+                setTimeout(() => {
+                    playSound('invalid');
+                    alert('注意：目前無可消除配對！建議使用「重新洗牌」。');
+                }, 300);
+            }
+        }
+
+        function sortBoardZOrder() {
+            gameBoardContainer.children.sort((a, b) => {
+                if (a.gridZ !== b.gridZ) return a.gridZ - b.gridZ;
+                if (a.gridR !== b.gridR) return a.gridR - b.gridR;
+                return a.gridC - b.gridC;
+            });
+        }
+
+        function setDifficulty(diff) {
+            currentDifficulty = diff;
+            
+            // Update UI buttons styling
+            ['easy', 'medium', 'hard'].forEach(d => {
+                const btn = document.getElementById(`btn-${d}`);
+                if (d === diff) {
+                    btn.className = "px-3 py-1 text-xs rounded border border-[#8c3a2b] bg-[#8c3a2b] text-[#f3eae1] font-bold transition";
+                } else {
+                    btn.className = "px-3 py-1 text-xs rounded border border-[#5a4638] bg-[#3a2e25] text-[#a89887] hover:text-white font-bold transition";
+                }
+            });
+
+            // Update floating legend
+            const guideList = document.getElementById('rule-guide-list');
+            guideList.innerHTML = RULE_GUIDES[diff].map(rule => `<li>${rule}</li>`).join('');
+
+            restartGame();
+        }
+
+        function restartGame() {
+            if (!gameBoardContainer) return;
+
+            // Clear old tiles
+            gameBoardContainer.removeChildren();
+            tilesList = [];
+            selectedTile = null;
+            historyStack = [];
+
+            // Reset Stats & Powerups
+            score = 0;
+            timeElapsed = 0;
+            hintCount = 3;
+            undoCount = 3;
+            shuffleCount = 2;
+
+            document.getElementById('stat-score').innerText = '0';
+            document.getElementById('hint-count').innerText = hintCount;
+            document.getElementById('undo-count').innerText = undoCount;
+            document.getElementById('shuffle-count').innerText = shuffleCount;
+
+            // Start Timer
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeElapsed++;
+                const mins = String(Math.floor(timeElapsed / 60)).padStart(2, '0');
+                const secs = String(timeElapsed % 60).padStart(2, '0');
+                document.getElementById('stat-timer').innerText = `${mins}:${secs}`;
+            }, 1000);
+
+            // Generate Layout
+            const positions = getLayoutPositions(currentDifficulty);
+            const totalPairs = positions.length / 2;
+            const tileValues = generatePairs(totalPairs, currentDifficulty);
+
+            // Create Pixi Sprites
+            positions.forEach((pos, idx) => {
+                const tileSprite = createTileSprite(tileValues[idx], pos);
+                tilesList.push(tileSprite);
+                gameBoardContainer.addChild(tileSprite);
+            });
+
+            document.getElementById('stat-tiles').innerText = tilesList.length;
+
+            sortBoardZOrder();
+            updateFreeStates();
+            centerBoard();
+        }
+
+        function updateStats(points) {
+            score += points;
+            document.getElementById('stat-score').innerText = score;
+        }
+
+        function triggerVictory() {
+            if (timerInterval) clearInterval(timerInterval);
+            playSound('win');
+
+            const bonus = (hintCount * 100) + (shuffleCount * 150) + (undoCount * 80);
+            const finalTotal = score + bonus;
+
+            document.getElementById('final-score').innerText = finalTotal;
+            document.getElementById('final-time').innerText = document.getElementById('stat-timer').innerText;
+            document.getElementById('final-bonus').innerText = `+${bonus}`;
+
+            document.getElementById('modal-victory').classList.remove('hidden');
+        }
+
+        /* Modal Toggle Functions */
+        function showRulesModal() {
+            document.getElementById('modal-rules').classList.remove('hidden');
+        }
+
+        function closeRulesModal() {
+            document.getElementById('modal-rules').classList.add('hidden');
+        }
+
+        function closeVictoryModal() {
+            document.getElementById('modal-victory').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
