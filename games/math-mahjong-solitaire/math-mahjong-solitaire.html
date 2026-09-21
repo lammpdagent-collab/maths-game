@@ -240,7 +240,27 @@
             soundEnabled = !soundEnabled;
             document.getElementById('audio-icon').innerText = soundEnabled ? '🔊' : '🔇';
             document.getElementById('btn-audio').childNodes[1].nodeValue = soundEnabled ? ' 音效: 開' : ' 音效: 關';
+            // BGM 隨音效開關暫停/恢復
+            if (!soundEnabled) {
+                bgmAudio.pause();
+            } else if (bgmStarted) {
+                bgmAudio.play().catch(err => console.warn('BGM resume blocked:', err));
+            }
         }
+
+        /* BGM 背景音樂：瀏覽器 autoplay 政策要求喺 user gesture 入面先可以 play()，
+           所以用 document pointerdown 監聽，第一次點擊（撳牌/掣）時啟動 */
+        const bgmAudio = new Audio();
+        bgmAudio.src = './StockTune-Echoes Through Time_1790002740.mp3';
+        bgmAudio.loop = true;
+        let bgmStarted = false;
+
+        function startBgm() {
+            if (!soundEnabled || bgmStarted) return;
+            bgmAudio.play().then(() => { bgmStarted = true; }).catch(err => console.warn('BGM play blocked:', err));
+        }
+
+        document.addEventListener('pointerdown', startBgm);
 
         function playSound(type) {
             if (!soundEnabled) return;
