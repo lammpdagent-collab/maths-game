@@ -968,17 +968,28 @@
                         txt.position.set(x, y);
                         gridContainer.addChild(txt);
                     } else if (step.type === 'borrow_tag') {
-                        const x = startX + (step.col + 1) * cellW + cellW / 2;
-                        const y = startY + (step.row ? step.row * 2 : 0) * cellH + cellH * 0.12; 
-                        const txt = new PIXI.Text(val.toString(), {
-                            fontFamily: 'Zen Maru Gothic',
-                            fontSize: fontSizeTag * 1.1,
-                            fontWeight: '900',
-                            fill: COLOR_ACCENT_RED
-                        });
-                        txt.anchor.set(0.5);
-                        txt.position.set(x, y);
-                        gridContainer.addChild(txt);
+                        // 如果同一位置後續有已完成的新退位標記，隱藏前一個標記，避免數字重疊
+                        const hasLaterCompletedBorrowTag = stepsList.some((s, sIdx) => 
+                            sIdx > stepIdx && 
+                            s.type === 'borrow_tag' && 
+                            s.col === step.col && 
+                            s.row === step.row && 
+                            completedSteps[s.id] !== undefined
+                        );
+
+                        if (!hasLaterCompletedBorrowTag) {
+                            const x = startX + (step.col + 1) * cellW + cellW / 2;
+                            const y = startY + (step.row ? step.row * 2 : 0) * cellH + cellH * 0.12; 
+                            const txt = new PIXI.Text(val.toString(), {
+                                fontFamily: 'Zen Maru Gothic',
+                                fontSize: fontSizeTag * 1.1,
+                                fontWeight: '900',
+                                fill: COLOR_ACCENT_RED
+                            });
+                            txt.anchor.set(0.5);
+                            txt.position.set(x, y);
+                            gridContainer.addChild(txt);
+                        }
                     } else if (step.type === 'sub_digit' || step.type === 'bring_down') {
                         const x = startX + (step.col + 1) * cellW + cellW / 2;
                         const y = startY + (step.row * 2 + 2.5) * cellH;
