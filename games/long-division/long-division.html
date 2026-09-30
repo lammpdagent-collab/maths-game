@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>小學直式除法大挑戰</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PixiJS v7 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Zen Maru Gothic -->
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        body {
+            font-family: 'Zen Maru Gothic', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #E6EDF5;
+            color: #334155;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        /* Neumorphism Styling */
+        .neu-bg { background-color: #E6EDF5; }
+        .neu-flat {
+            background: #E6EDF5;
+            box-shadow: 6px 6px 14px #c2cddb, -6px -6px 14px #ffffff;
+        }
+        .neu-pressed {
+            background: #E6EDF5;
+            box-shadow: inset 3px 3px 8px #c2cddb, inset -3px -3px 8px #ffffff;
+        }
+        .neu-btn {
+            background: #E6EDF5;
+            box-shadow: 4px 4px 10px #c2cddb, -4px -4px 10px #ffffff;
+            transition: all 0.15s ease-in-out;
+            color: #334155;
+        }
+        .neu-btn:hover {
+            box-shadow: 6px 6px 13px #bba5cd, -6px -6px 13px #ffffff;
+        }
+        .neu-btn:active {
+            box-shadow: inset 3px 3px 8px #c2cddb, inset -3px -3px 8px #ffffff;
+            transform: scale(0.97);
+        }
+        .neu-btn-active {
+            background: #E6EDF5;
+            box-shadow: inset 4px 4px 9px #b8c4d4, inset -4px -4px 9px #ffffff;
+            color: #059669;
+            font-weight: 900;
+        }
+        .neu-card {
+            background: #E6EDF5;
+            box-shadow: inset 3px 3px 8px #c2cddb, inset -3px -3px 8px #ffffff;
+        }
+        .modal-blur { backdrop-filter: blur(8px); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col h-screen w-screen overflow-hidden neu-bg">
+
+    <!-- Header Bar -->
+    <header class="py-2 px-3 md:px-5 my-1.5 mx-2 md:mx-4 neu-flat rounded-2xl flex flex-wrap items-center justify-between z-10 shrink-0 gap-2">
+        <div class="flex items-center gap-2 md:gap-3">
+            <div class="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl neu-flat flex items-center justify-center text-emerald-600 font-bold text-lg md:text-2xl shrink-0">
+                ÷
+            </div>
+            <div>
+                <h1 class="text-base md:text-xl font-black text-slate-700 tracking-wide leading-tight">直式除法大挑戰</h1>
+                <p class="hidden sm:block text-xs text-slate-400 font-bold">小學數學運算與退位借位練習</p>
+            </div>
+        </div>
+
+        <!-- Mode Selector -->
+        <div class="flex items-center neu-pressed p-1 rounded-xl md:rounded-2xl gap-1 overflow-x-auto no-scrollbar max-w-full">
+            <button id="btn-mode-21" onclick="setGameMode('2÷1')" class="px-2.5 py-1 md:px-3.5 md:py-1.5 text-xs md:text-sm font-bold rounded-lg md:rounded-xl neu-btn-active whitespace-nowrap">
+                2位 ÷ 1位
+            </button>
+            <button id="btn-mode-22" onclick="setGameMode('2÷2')" class="px-2.5 py-1 md:px-3.5 md:py-1.5 text-xs md:text-sm font-bold rounded-lg md:rounded-xl text-slate-600 transition-all whitespace-nowrap">
+                2位 ÷ 2位
+            </button>
+            <button id="btn-mode-31" onclick="setGameMode('3÷1')" class="px-2.5 py-1 md:px-3.5 md:py-1.5 text-xs md:text-sm font-bold rounded-lg md:rounded-xl text-slate-600 transition-all whitespace-nowrap">
+                3位 ÷ 1位
+            </button>
+            <button id="btn-mode-32" onclick="setGameMode('3÷2')" class="px-2.5 py-1 md:px-3.5 md:py-1.5 text-xs md:text-sm font-bold rounded-lg md:rounded-xl text-slate-600 transition-all whitespace-nowrap">
+                3位 ÷ 2位
+            </button>
+            <button id="btn-mode-custom" onclick="openCustomModal()" class="px-2.5 py-1 md:px-3.5 md:py-1.5 text-xs md:text-sm font-bold rounded-lg md:rounded-xl text-slate-600 transition-all flex items-center gap-1 whitespace-nowrap">
+                <i class="fa-solid fa-pen-to-square"></i> 自訂
+            </button>
+        </div>
+
+        <!-- Right Controls -->
+        <div class="flex items-center gap-2 md:gap-3 ml-auto sm:ml-0">
+            <div class="flex items-center gap-1.5 neu-pressed px-2.5 py-1 md:px-3.5 md:py-1.5 rounded-xl md:rounded-2xl">
+                <i class="fa-solid fa-star text-amber-400 text-sm md:text-base"></i>
+                <span id="streak-counter" class="text-slate-700 font-black text-sm md:text-base">0</span>
+            </div>
+            <button id="hint-btn" onclick="toggleHint()" class="px-2.5 py-1 md:px-3.5 md:py-1.5 rounded-xl md:rounded-2xl neu-btn flex items-center gap-1 text-xs md:text-sm font-bold text-slate-600" title="提示開關">
+                <i id="hint-icon" class="fa-regular fa-lightbulb text-slate-400 text-sm md:text-base"></i>
+                <span class="hidden sm:inline">提示</span>
+            </button>
+            <button id="sound-btn" onclick="toggleSound()" class="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl neu-btn flex items-center justify-center text-slate-600">
+                <i id="sound-icon" class="fa-solid fa-volume-high text-sm md:text-lg"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Interactive Area -->
+    <main class="flex-1 flex flex-col md:flex-row relative overflow-hidden p-2 md:p-4 gap-3 md:gap-5">
+        
+        <!-- Canvas Container for Long Division Grid -->
+        <div id="canvas-container" class="flex-1 min-h-[280px] neu-pressed rounded-2xl md:rounded-3xl relative overflow-hidden flex items-center justify-center p-1 md:p-2">
+            <!-- Canvas is dynamically attached here -->
+        </div>
+
+        <!-- Virtual Keypad Panel -->
+        <div class="w-full md:w-80 max-w-md mx-auto neu-flat rounded-2xl md:rounded-3xl p-3 md:p-5 flex flex-col justify-between shrink-0">
+            <!-- Step Instruction Card -->
+            <div id="instruction-card" class="neu-card rounded-xl md:rounded-2xl p-2.5 md:p-3.5 mb-1.5 md:mb-2 flex items-center gap-2.5 md:gap-3">
+                <div class="w-8 h-8 md:w-9 md:h-9 rounded-lg md:rounded-xl neu-btn text-emerald-600 flex items-center justify-center font-black shrink-0 text-sm md:text-base" id="step-number-badge">
+                    1
+                </div>
+                <div class="flex-1">
+                    <p id="instruction-text" class="text-xs md:text-sm font-bold text-slate-700 leading-tight">
+                        準備開始計算...
+                    </p>
+                </div>
+            </div>
+
+            <!-- Virtual Numpad -->
+            <div class="grid grid-cols-3 gap-2 md:gap-3 flex-1 my-1 md:my-2">
+                <button onclick="handleKeypadInput(7)" class="neu-btn rounded-xl md:rounded-2xl text-2xl md:text-3xl font-black flex items-center justify-center py-2 md:py-0">7</button>
+                <button onclick="handleKeypadInput(8)" class="neu-btn rounded-xl md:rounded-2xl text-2xl md:text-3xl font-black flex items-center justify-center py-2 md:py-0">8</button>
+                <button onclick="handleKeypadInput(9)" class="neu-btn rounded-xl md:rounded-2xl text-2xl md:text-3xl font-black flex items-center justify-center py-2 md:py-0">9</button>
+                
+                <button onclick="handleKeypadInput(4)" class="neu-btn rounded-xl md:rounded-2xl text-2xl md:text-3xl font-black flex items-center justify-center py-2 md:py-0">4</button>
+                <button onclick="handleKeypadInput(5)" class="neu-btn rounded-xl md:rounded-2xl text-2xl md:text-3xl font-black flex items-center justify-center py-2 md:py-0">5</button>
+                <button onclick="handleKeypadInput(6)" class="neu-btn rounded-xl md:rounded-2xl text-2xl md:text-3xl font-black flex items-center justify-center py-2 md:py-0">6</button>
+                
+                <button onclick="handleKeypadInput(1)" class="neu-btn rounded-xl md:rounded-2xl text-2xl md:text-3xl font-black flex items-center justify-center py-2 md:py-0">1</button>
+                <button onclick="handleKeypadInput(2)" class="neu-btn rounded-xl md:rounded-2xl text-2xl md:text-3xl font-black flex items-center justify-center py-2 md:py-0">2</button>
+                <button onclick="handleKeypadInput(3)" class="neu-btn rounded-xl md:rounded-2xl text-2xl md:text-3xl font-black flex items-center justify-center py-2 md:py-0">3</button>
+                
+                <button onclick="handleKeypadInput(0)" class="neu-btn rounded-xl md:rounded-2xl text-2xl md:text-3xl font-black flex items-center justify-center py-2 md:py-1">0</button>
+                <button id="btn-skip" onclick="handleSkip()" class="col-span-2 neu-btn rounded-xl md:rounded-2xl text-xs md:text-sm font-bold text-amber-600 flex items-center justify-center gap-1.5 py-2 md:py-1">
+                    <i class="fa-solid fa-forward"></i> 跳過
+                </button>
+            </div>
+
+            <!-- Skip / New Problem Row -->
+            <div class="flex gap-2 mt-1">
+                <button onclick="generateNewProblem()" class="w-full py-2 md:py-2.5 neu-btn text-slate-600 font-bold rounded-xl md:rounded-2xl text-xs md:text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> 跳過換下一題
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Custom Problem Modal -->
+    <div id="custom-modal" class="fixed inset-0 bg-slate-900/20 modal-blur z-50 flex items-center justify-center hidden">
+        <div class="neu-flat rounded-3xl p-6 w-80 md:w-96 flex flex-col gap-4">
+            <div class="flex justify-between items-center border-b border-slate-300/50 pb-3">
+                <h3 class="text-lg font-black text-slate-700">自訂除法題目</h3>
+                <button onclick="closeCustomModal()" class="w-8 h-8 rounded-xl neu-btn text-slate-400 hover:text-slate-600 text-sm flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">被除數 (Dividend)</label>
+                    <input type="number" id="custom-dividend" min="10" max="999" value="205" class="w-full neu-pressed rounded-xl px-4 py-3 text-lg font-bold text-slate-700 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">除數 (Divisor)</label>
+                    <input type="number" id="custom-divisor" min="1" max="99" value="15" class="w-full neu-pressed rounded-xl px-4 py-3 text-lg font-bold text-slate-700 focus:outline-none">
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeCustomModal()" class="flex-1 py-3 neu-btn text-slate-600 font-bold rounded-xl text-sm">取消</button>
+                <button onclick="applyCustomProblem()" class="flex-1 py-3 neu-btn text-emerald-600 font-bold rounded-xl text-sm">開始練習</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast-message" class="fixed top-16 left-1/2 -translate-x-1/2 neu-flat text-slate-700 font-bold px-5 py-3 rounded-2xl shadow-lg opacity-0 pointer-events-none transition-all duration-300 z-50 text-xs md:text-sm flex items-center gap-2">
+        <i id="toast-icon" class="fa-solid fa-circle-info"></i>
+        <span id="toast-text">提示訊息</span>
+    </div>
+
+    <script>
+        // Sound Generator Class
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playTone(freq, type, duration, delay = 0) {
+                if (!this.enabled) return;
+                this.init();
+                setTimeout(() => {
+                    try {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = type;
+                        osc.frequency.value = freq;
+                        
+                        gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+
+                        osc.start();
+                        osc.stop(this.ctx.currentTime + duration);
+                    } catch(e){}
+                }, delay * 1000);
+            }
+
+            playCorrect() {
+                this.playTone(523.25, 'sine', 0.12, 0);   // C5
+                this.playTone(659.25, 'sine', 0.18, 0.08); // E5
+            }
+
+            playError() {
+                this.playTone(180, 'sawtooth', 0.2, 0);
+            }
+
+            playBorrow() {
+                this.playTone(440, 'triangle', 0.1, 0);   // A4
+                this.playTone(880, 'triangle', 0.15, 0.06);// A5
+            }
+
+            playSuccess() {
+                this.playTone(523.25, 'triangle', 0.12, 0);   // C5
+                this.playTone(659.25, 'triangle', 0.12, 0.1);  // E5
+                this.playTone(783.99, 'triangle', 0.12, 0.2);  // G5
+                this.playTone(1046.50, 'triangle', 0.4, 0.3);  // C6
+            }
+        }
+
+        const soundFX = new SoundEffects();
+        let soundEnabled = true;
+
+        // Global State Variables
+        let currentMode = '3÷2'; // Default mode
+        let dividend = 205;
+        let divisor = 15;
+        let streak = 0;
+        let showHints = false;
+
+        let stepsList = [];
+        let currentStepIndex = 0;
+        let completedSteps = {}; // step.id -> value
+        let currentInputBuffer = ""; // Multi-digit buffer for borrow tags (e.g., '10')
+
+        // Canvas / PixiJS variables
+        let app = null;
+        let gridContainer = null;
+        let targetPulseGraphics = null;
+
+        const COLOR_BG_CANVAS = 0xE6EDF5;
+        const COLOR_TEXT_MAIN = 0x334155;
+        const COLOR_TEXT_MUTED = 0x94A3B8;
+        const COLOR_ACCENT_GREEN = 0x059669;
+        const COLOR_ACCENT_RED = 0xDC2626;
+        const COLOR_PULSE = 0x10B981;
+        const COLOR_BORROW_BG = 0xFEE2E2;
+
+        // UI Helpers
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            soundFX.enabled = soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            icon.className = soundEnabled ? 'fa-solid fa-volume-high text-sm md:text-lg' : 'fa-solid fa-volume-xmark text-sm md:text-lg text-slate-400';
+        }
+
+        function showToast(msg, isSuccess = true) {
+            const toast = document.getElementById('toast-message');
+            const toastText = document.getElementById('toast-text');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastText.innerText = msg;
+            toastIcon.className = isSuccess ? 'fa-solid fa-circle-check text-emerald-500' : 'fa-solid fa-triangle-exclamation text-amber-500';
+            
+            toast.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-2');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none', '-translate-y-2');
+                toast.classList.remove('opacity-100', 'translate-y-0');
+            }, 1800);
+        }
+
+        function toggleHint() {
+            showHints = !showHints;
+            const hintBtn = document.getElementById('hint-btn');
+            const hintIcon = document.getElementById('hint-icon');
+            if (showHints) {
+                hintBtn.classList.add('neu-btn-active');
+                hintIcon.className = 'fa-solid fa-lightbulb text-amber-500 text-sm md:text-base';
+            } else {
+                hintBtn.classList.remove('neu-btn-active');
+                hintIcon.className = 'fa-regular fa-lightbulb text-slate-400 text-sm md:text-base';
+            }
+            updateInstruction();
+        }
+
+        function setGameMode(mode) {
+            currentMode = mode;
+            ['21', '22', '31', '32', 'custom'].forEach(m => {
+                const btn = document.getElementById(`btn-mode-${m}`);
+                if (btn) {
+                    if (m === mode.replace('÷','')) {
+                        btn.className = "px-2.5 py-1 md:px-3.5 md:py-1.5 text-xs md:text-sm font-bold rounded-lg md:rounded-xl neu-btn-active whitespace-nowrap";
+                    } else {
+                        btn.className = "px-2.5 py-1 md:px-3.5 md:py-1.5 text-xs md:text-sm font-bold rounded-lg md:rounded-xl text-slate-600 transition-all whitespace-nowrap";
+                    }
+                }
+            });
+            generateNewProblem();
+        }
+
+        function openCustomModal() {
+            document.getElementById('custom-modal').classList.remove('hidden');
+        }
+
+        function closeCustomModal() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        }
+
+        function applyCustomProblem() {
+            const dInput = parseInt(document.getElementById('custom-dividend').value);
+            const vInput = parseInt(document.getElementById('custom-divisor').value);
+
+            if (isNaN(dInput) || isNaN(vInput) || dInput <= 0 || vInput <= 0) {
+                showToast('請輸入有效的正整數！', false);
+                return;
+            }
+            if (vInput > dInput) {
+                showToast('被除數必須大於或等於除數！', false);
+                return;
+            }
+
+            dividend = dInput;
+            divisor = vInput;
+            closeCustomModal();
+            initDivisionProblem();
+            showToast('自訂除法題目設定成功！', true);
+        }
+
+        function generateNewProblem() {
+            currentInputBuffer = "";
+            if (currentMode === '2÷1') {
+                divisor = Math.floor(Math.random() * 8) + 2; // 2..9
+                dividend = Math.floor(Math.random() * 89) + 10; // 10..98
+            } else if (currentMode === '2÷2') {
+                divisor = Math.floor(Math.random() * 89) + 10; // 10..98
+                dividend = Math.floor(Math.random() * 89) + 10; // 10..98
+                if (dividend < divisor) dividend += divisor;
+            } else if (currentMode === '3÷1') {
+                divisor = Math.floor(Math.random() * 8) + 2; // 2..9
+                dividend = Math.floor(Math.random() * 899) + 100; // 100..998
+            } else if (currentMode === '3÷2') {
+                divisor = Math.floor(Math.random() * 89) + 10; // 10..98
+                dividend = Math.floor(Math.random() * 899) + 100; // 100..998
+                if (dividend < divisor) dividend += divisor;
+            }
+            initDivisionProblem();
+        }
+
+        function initDivisionProblem() {
+            stepsList = generateDivisionSteps(dividend, divisor);
+            currentStepIndex = 0;
+            completedSteps = {};
+            currentInputBuffer = "";
+
+            renderGrid();
+            updateInstruction();
+        }
+
+        // Division Step Sequence Generator
+        function generateDivisionSteps(d, v) {
+            const steps = [];
+            const dStr = d.toString();
+            const vStr = v.toString();
+            const numDigits = dStr.length;
+
+            let currentVal = 0;
+            let gridRowIndex = 0;
+            let hasStartedQuotient = false;
+
+            for (let i = 0; i < numDigits; i++) {
+                const digitVal = parseInt(dStr[i]);
+                currentVal = currentVal * 10 + digitVal;
+                const colIndex = i; // Column index corresponding to dividend digit
+
+                // Case 1: First digits where currentVal < divisor
+                if (currentVal < v && !hasStartedQuotient) {
+                    steps.push({
+                        id: `skip_${i}`,
+                        type: 'skip_quotient',
+                        col: colIndex,
+                        prompt: `看前位數字 (${currentVal}) < 除數 (${v})，不夠除，請點選【跳過】`,
+                        hint: `💡 提示：點按右側【跳過】按鈕，商數該位保持留白。`
+                    });
+                    continue;
+                }
+
+                hasStartedQuotient = true;
+                const qDigit = Math.floor(currentVal / v);
+
+                // Step: Fill Quotient
+                steps.push({
+                    id: `q_${i}`,
+                    type: 'quotient',
+                    expected: qDigit,
+                    col: colIndex,
+                    prompt: `試商：計算 ${currentVal} ÷ ${v}，請填寫商數`,
+                    hint: `💡 提示：${currentVal} ÷ ${v} 的最大整數商為 ${qDigit}。`
+                });
+
+                // Step: Calculate Product (v * qDigit)
+                const product = v * qDigit;
+                const prodStr = product.toString();
+
+                if (vStr.length === 2) {
+                    const vOnes = parseInt(vStr[1]);
+                    const vTens = parseInt(vStr[0]);
+
+                    const onesProd = vOnes * qDigit;
+                    const onesWrite = onesProd % 10;
+                    const carryToTens = Math.floor(onesProd / 10);
+
+                    // Fill Product Ones
+                    steps.push({
+                        id: `prod_ones_${i}_r${gridRowIndex}`,
+                        type: 'prod_digit',
+                        expected: onesWrite,
+                        col: colIndex,
+                        row: gridRowIndex,
+                        prompt: `計算乘積個位：${vOnes} × ${qDigit}，請填寫個位數字`,
+                        hint: `💡 提示：除數個位 ${vOnes} × 商 ${qDigit} = ${onesProd}，填寫個位 ${onesWrite}。`
+                    });
+
+                    if (carryToTens > 0) {
+                        steps.push({
+                            id: `prod_carry_${i}_r${gridRowIndex}`,
+                            type: 'prod_carry',
+                            expected: carryToTens,
+                            col: colIndex - 1,
+                            row: gridRowIndex,
+                            prompt: `請填寫乘積的十位進位數字`,
+                            hint: `💡 提示：滿十進位，在乘積十位上方填入進位 ${carryToTens}。`
+                        });
+                    }
+
+                    const tensProd = vTens * qDigit + carryToTens;
+                    const tensWrite = tensProd % 10;
+                    const hundredsWrite = Math.floor(tensProd / 10);
+
+                    steps.push({
+                        id: `prod_tens_${i}_r${gridRowIndex}`,
+                        type: 'prod_digit',
+                        expected: tensWrite,
+                        col: colIndex - 1,
+                        row: gridRowIndex,
+                        prompt: `計算乘積十位：請填寫十位數字`,
+                        hint: `💡 提示：${vTens} × ${qDigit}${carryToTens > 0 ? ' + 進位 ' + carryToTens : ''} = ${tensProd}，填寫 ${tensWrite}。`
+                    });
+
+                    if (hundredsWrite > 0) {
+                        steps.push({
+                            id: `prod_hundreds_${i}_r${gridRowIndex}`,
+                            type: 'prod_digit',
+                            expected: hundredsWrite,
+                            col: colIndex - 2,
+                            row: gridRowIndex,
+                            prompt: `計算乘積百位：請填寫最高位數字`,
+                            hint: `💡 提示：填寫乘積最高位 ${hundredsWrite}。`
+                        });
+                    }
+                } else {
+                    // 1-digit divisor
+                    for (let p = 0; p < prodStr.length; p++) {
+                        const digitVal = parseInt(prodStr[prodStr.length - 1 - p]);
+                        steps.push({
+                            id: `prod_${i}_p${p}_r${gridRowIndex}`,
+                            type: 'prod_digit',
+                            expected: digitVal,
+                            col: colIndex - p,
+                            row: gridRowIndex,
+                            prompt: `計算乘積：${v} × ${qDigit}，請填寫對應數字`,
+                            hint: `💡 提示：${v} × ${qDigit} = ${product}，由右至左填寫數字 ${digitVal}。`
+                        });
+                    }
+                }
+
+                // Subtraction & Borrowing Steps Logic
+                const minuendStr = currentVal.toString();
+                const minuendLen = minuendStr.length;
+
+                let workingMinuendDigits = [];
+                for (let k = 0; k < minuendLen; k++) {
+                    workingMinuendDigits.push(parseInt(minuendStr[minuendLen - 1 - k]));
+                }
+
+                let workingSubtractorDigits = [];
+                for (let k = 0; k < prodStr.length; k++) {
+                    workingSubtractorDigits.push(parseInt(prodStr[prodStr.length - 1 - k]));
+                }
+                while (workingSubtractorDigits.length < minuendLen) {
+                    workingSubtractorDigits.push(0);
+                }
+
+                const remVal = currentVal - product;
+                
+                if (remVal === 0) {
+                    steps.push({
+                        id: `skip_rem_${i}_r${gridRowIndex}`,
+                        type: 'skip_remainder',
+                        col: colIndex,
+                        row: gridRowIndex,
+                        prompt: `相減為 0，此處留白，請點選【跳過】`,
+                        hint: `💡 提示：相減為 0，依校本要求不寫 0，請點選右側【跳過】。`
+                    });
+                } else {
+                    const remStr = remVal.toString();
+                    
+                    for (let k = 0; k < minuendLen; k++) {
+                        const targetCol = colIndex - k;
+                        const subDigit = workingSubtractorDigits[k];
+                        
+                        // Check if subtraction at column k is insufficient
+                        if (workingMinuendDigits[k] < subDigit) {
+                            let borrowFromIdx = k + 1;
+                            while (borrowFromIdx < minuendLen && workingMinuendDigits[borrowFromIdx] === 0) {
+                                borrowFromIdx++;
+                            }
+
+                            if (borrowFromIdx < minuendLen) {
+                                const borrowFromCol = colIndex - borrowFromIdx;
+                                const originalValAtBorrow = workingMinuendDigits[borrowFromIdx];
+                                const originalValAtTarget = workingMinuendDigits[k];
+
+                                // Step 1: User clicks high digit to slash/borrow
+                                steps.push({
+                                    id: `borrow_click_src_${i}_k${k}_r${gridRowIndex}`,
+                                    type: 'borrow_click',
+                                    col: borrowFromCol,
+                                    row: gridRowIndex,
+                                    prompt: `相減不夠減！請點擊畫面上被借位數字進行劃線退位`,
+                                    hint: `💡 提示：點按畫面上數字 ${originalValAtBorrow} 進行劃線退位。`
+                                });
+
+                                // Step 2: Tag source digit with remaining value
+                                workingMinuendDigits[borrowFromIdx] -= 1;
+                                steps.push({
+                                    id: `borrow_tag_src_${i}_b${borrowFromIdx}_r${gridRowIndex}`,
+                                    type: 'borrow_tag',
+                                    expected: workingMinuendDigits[borrowFromIdx],
+                                    col: borrowFromCol,
+                                    row: gridRowIndex,
+                                    prompt: `高位被借走 1，請在上方填寫退位標記`,
+                                    hint: `💡 提示：在劃線數字上方填寫標記數字 ${workingMinuendDigits[borrowFromIdx]}。`
+                                });
+
+                                // Cascading 9s for intermediate zeros
+                                for (let m = borrowFromIdx - 1; m > k; m--) {
+                                    const midCol = colIndex - m;
+                                    steps.push({
+                                        id: `borrow_click_mid_${i}_m${m}_r${gridRowIndex}`,
+                                        type: 'borrow_click',
+                                        col: midCol,
+                                        row: gridRowIndex,
+                                        prompt: `請點擊中間數字 0 進行劃線退位`,
+                                        hint: `💡 提示：點按畫面上數字 0 進行劃線退位。`
+                                    });
+                                    workingMinuendDigits[m] = 9;
+                                    steps.push({
+                                        id: `borrow_tag_mid_${i}_b${m}_r${gridRowIndex}`,
+                                        type: 'borrow_tag',
+                                        expected: 9,
+                                        col: midCol,
+                                        row: gridRowIndex,
+                                        prompt: `中間數字 0 借位後變為 9，請填寫標記數字 9`,
+                                        hint: `💡 提示：中間 0 借位後變為 9，上方填寫 9。`
+                                    });
+                                }
+
+                                // Step 3: User clicks target digit to slash
+                                steps.push({
+                                    id: `borrow_click_tgt_${i}_k${k}_r${gridRowIndex}`,
+                                    type: 'borrow_click',
+                                    col: targetCol,
+                                    row: gridRowIndex,
+                                    prompt: `請點擊當前位數字進行劃線退位`,
+                                    hint: `💡 提示：點按畫面上當前位數字 ${originalValAtTarget} 進行劃線退位。`
+                                });
+
+                                // Step 4: Tag target digit with new sum
+                                workingMinuendDigits[k] += 10;
+                                steps.push({
+                                    id: `borrow_tag_tgt_${i}_k${k}_r${gridRowIndex}`,
+                                    type: 'borrow_tag',
+                                    expected: workingMinuendDigits[k],
+                                    col: targetCol,
+                                    row: gridRowIndex,
+                                    prompt: `當前位得到借位 10，請在上方填寫退位標記`,
+                                    hint: `💡 提示：在劃線數字上方填寫標記數字 ${workingMinuendDigits[k]}。`
+                                });
+                            }
+                        }
+
+                        // Subtraction result for current column
+                        if (k < remStr.length) {
+                            const digitVal = parseInt(remStr[remStr.length - 1 - k]);
+                            steps.push({
+                                id: `sub_digit_${i}_p${k}_r${gridRowIndex}`,
+                                type: 'sub_digit',
+                                expected: digitVal,
+                                col: targetCol,
+                                row: gridRowIndex,
+                                prompt: `相減求餘：請填寫相減後的數字`,
+                                hint: `💡 提示：填寫相減結果 ${digitVal}。`
+                            });
+                        }
+                    }
+                }
+
+                if (i < numDigits - 1) {
+                    const nextDigit = parseInt(dStr[i + 1]);
+                    steps.push({
+                        id: `bring_down_${i+1}`,
+                        type: 'bring_down',
+                        expected: nextDigit,
+                        col: i + 1,
+                        row: gridRowIndex,
+                        prompt: `請將被除數下一位數字拉下來`,
+                        hint: `💡 提示：在餘數右邊填寫拉下來的數字 ${nextDigit}。`
+                    });
+                }
+
+                currentVal = remVal;
+                gridRowIndex++;
+            }
+
+            return steps;
+        }
+
+        function updateInstruction() {
+            if (currentStepIndex < stepsList.length) {
+                const step = stepsList[currentStepIndex];
+                let instructionText = showHints ? step.hint : step.prompt;
+
+                document.getElementById('instruction-text').innerText = instructionText;
+                document.getElementById('step-number-badge').innerText = currentStepIndex + 1;
+            }
+        }
+
+        function handleSkip() {
+            if (currentStepIndex >= stepsList.length) return;
+            const step = stepsList[currentStepIndex];
+            currentInputBuffer = "";
+
+            if (step.type === 'skip_quotient' || step.type === 'skip_remainder') {
+                soundFX.playCorrect();
+                completedSteps[step.id] = true;
+                currentStepIndex++;
+                checkStepCompletion();
+            } else {
+                soundFX.playError();
+                if (step.type === 'sub_digit' && step.expected === 0) {
+                    showToast('此處需填入數字 0，不能留白喔！', false);
+                } else {
+                    showToast('目前步驟無法跳過喔！', false);
+                }
+            }
+        }
+
+        function checkStepCompletion() {
+            if (currentStepIndex >= stepsList.length) {
+                soundFX.playSuccess();
+                streak++;
+                document.getElementById('streak-counter').innerText = streak;
+                showToast('恭喜答對！連勝 +1 🎉', true);
+
+                renderGrid();
+                const qVal = Math.floor(dividend / divisor);
+                const rVal = dividend % divisor;
+                document.getElementById('instruction-text').innerText = `太棒了！解答完全正確！ (商: ${qVal}, 餘數: ${rVal})`;
+                document.getElementById('step-number-badge').innerText = "✓";
+
+                setTimeout(() => {
+                    generateNewProblem();
+                }, 2800);
+            } else {
+                renderGrid();
+                updateInstruction();
+            }
+        }
+
+        function handleKeypadInput(num) {
+            if (currentStepIndex >= stepsList.length) return;
+            const step = stepsList[currentStepIndex];
+
+            if (step.type === 'skip_quotient') {
+                soundFX.playError();
+                showToast('不夠除，請點選【跳過】！', false);
+                return;
+            }
+
+            if (step.type === 'skip_remainder') {
+                soundFX.playError();
+                showToast('相減為 0，依校本要求不寫 0，請點選【跳過】！', false);
+                return;
+            }
+
+            if (step.type === 'borrow_click') {
+                soundFX.playError();
+                showToast('請直接點擊畫面上高位被借位數字！', false);
+                return;
+            }
+
+            const expectedStr = step.expected.toString();
+
+            // Multi-digit entry for borrow tags (e.g. 10, 11, 12...)
+            if (expectedStr.length > 1) {
+                if (currentInputBuffer === "") {
+                    if (num.toString() === expectedStr[0]) {
+                        currentInputBuffer = num.toString();
+                        soundFX.playBorrow();
+                        showToast(`已輸入 ${num}，請繼續輸入第二個數字...`, true);
+                        renderGrid();
+                        return;
+                    } else {
+                        currentInputBuffer = "";
+                        soundFX.playError();
+                        showToast('數字不對喔，再試一次！', false);
+                        renderGrid();
+                        return;
+                    }
+                } else {
+                    const combined = currentInputBuffer + num.toString();
+                    if (combined === expectedStr) {
+                        currentInputBuffer = "";
+                        soundFX.playCorrect();
+                        completedSteps[step.id] = step.expected;
+                        currentStepIndex++;
+                        checkStepCompletion();
+                    } else {
+                        currentInputBuffer = "";
+                        soundFX.playError();
+                        showToast('數字不對喔，重試一次！', false);
+                        renderGrid();
+                    }
+                }
+            } else {
+                // Single-digit entry (including 0!)
+                currentInputBuffer = "";
+                if (num === step.expected) {
+                    soundFX.playCorrect();
+                    completedSteps[step.id] = step.expected;
+                    currentStepIndex++;
+                    checkStepCompletion();
+                } else {
+                    soundFX.playError();
+                    showToast('算錯囉，再試一次！', false);
+                }
+            }
+        }
+
+        // Canvas Rendering with PixiJS
+        function handleResize() {
+            if (!app) return;
+            const container = document.getElementById('canvas-container');
+            app.renderer.resize(container.clientWidth, container.clientHeight);
+            renderGrid();
+        }
+
+        function renderGrid() {
+            if (!app || !gridContainer) return;
+
+            gridContainer.removeChildren();
+            targetPulseGraphics.removeChildren();
+
+            const dStr = dividend.toString();
+            const vStr = divisor.toString();
+
+            const maxCols = dStr.length + 2;
+            const cellW = Math.min(54, Math.max(36, Math.floor((app.screen.width - 40) / (maxCols + 1))));
+            const cellH = cellW;
+
+            const fontSizeDigit = Math.round(cellW * 0.54);
+            const fontSizeHeader = Math.max(10, Math.round(cellW * 0.22));
+            const fontSizeTag = Math.max(9, Math.round(cellW * 0.24));
+
+            const totalW = (maxCols + 1) * cellW;
+            const startX = (app.screen.width - totalW) / 2 + cellW;
+            const startY = Math.max(60, (app.screen.height - 280) / 2 + 50);
+
+            const activeStep = stepsList[currentStepIndex];
+
+            // 1. Column Headers (百位, 十位, 個位)
+            const headers = ['個位', '十位', '百位', '千位'];
+            for (let i = 0; i < dStr.length; i++) {
+                const headerText = headers[dStr.length - 1 - i];
+                const txt = new PIXI.Text(headerText, {
+                    fontFamily: 'Zen Maru Gothic',
+                    fontSize: fontSizeHeader,
+                    fontWeight: '700',
+                    fill: COLOR_TEXT_MUTED
+                });
+                txt.anchor.set(0.5);
+                txt.position.set(startX + (i + 1) * cellW + cellW / 2, startY - cellH * 1.5);
+                gridContainer.addChild(txt);
+            }
+
+            // 2. Division Bracket Symbol
+            const divisionLine = new PIXI.Graphics();
+            divisionLine.lineStyle(Math.max(2.5, Math.round(cellW * 0.06)), COLOR_TEXT_MAIN, 1);
+            
+            const lineStartX = startX + cellW * 0.85;
+            const lineEndX = startX + (dStr.length + 1) * cellW;
+
+            divisionLine.moveTo(lineStartX, startY - 4);
+            divisionLine.lineTo(lineEndX, startY - 4);
+
+            divisionLine.moveTo(lineStartX, startY - 4);
+            divisionLine.quadraticCurveTo(
+                lineStartX + cellW * 0.28,
+                startY + cellH * 0.5,
+                lineStartX,
+                startY + cellH - 2
+            );
+            gridContainer.addChild(divisionLine);
+
+            // 3. Divisor Text
+            const divisorTxt = new PIXI.Text(vStr, {
+                fontFamily: 'Zen Maru Gothic',
+                fontSize: fontSizeDigit,
+                fontWeight: '900',
+                fill: COLOR_TEXT_MAIN
+            });
+            divisorTxt.anchor.set(1, 0.5);
+            divisorTxt.position.set(startX + cellW * 0.45, startY + cellH / 2);
+            gridContainer.addChild(divisorTxt);
+
+            // 4. Dividend Digits
+            for (let i = 0; i < dStr.length; i++) {
+                const x = startX + (i + 1) * cellW + cellW / 2;
+                const y = startY + cellH / 2;
+
+                let isSlashed = false;
+                stepsList.forEach((s, sIdx) => {
+                    if (sIdx < currentStepIndex && s.type === 'borrow_click' && s.col === i && s.row === 0) {
+                        isSlashed = true;
+                    }
+                });
+
+                const txt = new PIXI.Text(dStr[i], {
+                    fontFamily: 'Zen Maru Gothic',
+                    fontSize: fontSizeDigit,
+                    fontWeight: '900',
+                    fill: isSlashed ? 0x94A3B8 : COLOR_TEXT_MAIN
+                });
+                txt.anchor.set(0.5);
+                txt.position.set(x, y);
+
+                // Interactive listener for borrow_click
+                if (activeStep && activeStep.type === 'borrow_click' && activeStep.col === i && activeStep.row === 0) {
+                    txt.eventMode = 'static';
+                    txt.cursor = 'pointer';
+                    txt.on('pointerdown', () => {
+                        soundFX.playBorrow();
+                        currentStepIndex++;
+                        currentInputBuffer = "";
+                        checkStepCompletion();
+                    });
+                }
+
+                gridContainer.addChild(txt);
+
+                if (isSlashed) {
+                    const slash = new PIXI.Graphics();
+                    slash.lineStyle(2.5, COLOR_ACCENT_RED, 0.85);
+                    slash.moveTo(x - cellW * 0.25, y + cellH * 0.25);
+                    slash.lineTo(x + cellW * 0.25, y - cellH * 0.25);
+                    gridContainer.addChild(slash);
+                }
+            }
+
+            // 5. Render Completed Steps & Borrow Tags
+            stepsList.forEach((step, stepIdx) => {
+                if (completedSteps[step.id] !== undefined) {
+                    const val = completedSteps[step.id];
+
+                    let stepSlashed = false;
+                    stepsList.forEach((s, sIdx) => {
+                        if (sIdx < currentStepIndex && s.type === 'borrow_click' && s.col === step.col && s.row === step.row + 1) {
+                            stepSlashed = true;
+                        }
+                    });
+
+                    if (step.type === 'quotient') {
+                        const x = startX + (step.col + 1) * cellW + cellW / 2;
+                        const y = startY - cellH / 2 - 4;
+                        const txt = new PIXI.Text(val.toString(), {
+                            fontFamily: 'Zen Maru Gothic',
+                            fontSize: fontSizeDigit,
+                            fontWeight: '900',
+                            fill: COLOR_ACCENT_GREEN
+                        });
+                        txt.anchor.set(0.5);
+                        txt.position.set(x, y);
+                        gridContainer.addChild(txt);
+                    } else if (step.type === 'prod_digit') {
+                        const x = startX + (step.col + 1) * cellW + cellW / 2;
+                        const y = startY + (step.row * 2 + 1.5) * cellH;
+                        const txt = new PIXI.Text(val.toString(), {
+                            fontFamily: 'Zen Maru Gothic',
+                            fontSize: fontSizeDigit,
+                            fontWeight: '900',
+                            fill: COLOR_ACCENT_GREEN
+                        });
+                        txt.anchor.set(0.5);
+                        txt.position.set(x, y);
+                        gridContainer.addChild(txt);
+                    } else if (step.type === 'prod_carry') {
+                        const x = startX + (step.col + 1) * cellW + cellW * 0.85; // Shifted right between digits
+                        const y = startY + (step.row * 2 + 1) * cellH; // Vertically between dividend and product
+                        const badge = new PIXI.Graphics();
+                        badge.beginFill(COLOR_BORROW_BG);
+                        badge.lineStyle(1.5, COLOR_ACCENT_RED, 1);
+                        badge.drawCircle(x, y, fontSizeTag * 0.8);
+                        badge.endFill();
+                        gridContainer.addChild(badge);
+
+                        const txt = new PIXI.Text(val.toString(), {
+                            fontFamily: 'Zen Maru Gothic',
+                            fontSize: fontSizeTag,
+                            fontWeight: '900',
+                            fill: COLOR_ACCENT_RED
+                        });
+                        txt.anchor.set(0.5);
+                        txt.position.set(x, y);
+                        gridContainer.addChild(txt);
+                    } else if (step.type === 'borrow_tag') {
+                        const x = startX + (step.col + 1) * cellW + cellW / 2;
+                        const y = startY + (step.row ? step.row * 2 : 0) * cellH + cellH * 0.12; 
+                        const txt = new PIXI.Text(val.toString(), {
+                            fontFamily: 'Zen Maru Gothic',
+                            fontSize: fontSizeTag * 1.1,
+                            fontWeight: '900',
+                            fill: COLOR_ACCENT_RED
+                        });
+                        txt.anchor.set(0.5);
+                        txt.position.set(x, y);
+                        gridContainer.addChild(txt);
+                    } else if (step.type === 'sub_digit' || step.type === 'bring_down') {
+                        const x = startX + (step.col + 1) * cellW + cellW / 2;
+                        const y = startY + (step.row * 2 + 2.5) * cellH;
+                        const txt = new PIXI.Text(val.toString(), {
+                            fontFamily: 'Zen Maru Gothic',
+                            fontSize: fontSizeDigit,
+                            fontWeight: '900',
+                            fill: stepSlashed ? 0x94A3B8 : COLOR_ACCENT_GREEN
+                        });
+                        txt.anchor.set(0.5);
+                        txt.position.set(x, y);
+
+                        if (activeStep && activeStep.type === 'borrow_click' && activeStep.col === step.col && activeStep.row === step.row + 1) {
+                            txt.eventMode = 'static';
+                            txt.cursor = 'pointer';
+                            txt.on('pointerdown', () => {
+                                soundFX.playBorrow();
+                                currentStepIndex++;
+                                currentInputBuffer = "";
+                                checkStepCompletion();
+                            });
+                        }
+
+                        gridContainer.addChild(txt);
+
+                        if (stepSlashed) {
+                            const slash = new PIXI.Graphics();
+                            slash.lineStyle(2.5, COLOR_ACCENT_RED, 0.85);
+                            slash.moveTo(x - cellW * 0.25, y + cellH * 0.25);
+                            slash.lineTo(x + cellW * 0.25, y - cellH * 0.25);
+                            gridContainer.addChild(slash);
+                        }
+                    }
+                }
+            });
+
+            // 6. Subtraction Lines
+            const maxRows = Math.max(...stepsList.map(s => s.row || 0), 0);
+            for (let r = 0; r <= maxRows; r++) {
+                const hasProdInRow = stepsList.some(s => s.row === r && s.type === 'prod_digit' && completedSteps[s.id] !== undefined);
+                if (hasProdInRow) {
+                    const lineY = startY + (r * 2 + 2) * cellH;
+                    const subLine = new PIXI.Graphics();
+                    subLine.lineStyle(Math.max(2, Math.round(cellW * 0.05)), COLOR_TEXT_MAIN, 1);
+                    subLine.moveTo(startX + cellW * 0.5, lineY);
+                    subLine.lineTo(startX + (dStr.length + 1) * cellW, lineY);
+                    gridContainer.addChild(subLine);
+                }
+            }
+
+            // 7. Target Pulse Box & Partial Buffer
+            if (activeStep && activeStep.col !== undefined) {
+                const x = startX + (activeStep.col + 1) * cellW;
+                let y = startY;
+                
+                let pulseX = x + 2;
+                let pulseY = y + 2;
+                let pulseW = cellW - 4;
+                let pulseH = cellH - 4;
+                let bufferX = x + cellW / 2;
+                let bufferY = y + cellH / 2;
+
+                if (activeStep.type === 'quotient' || activeStep.type === 'skip_quotient') {
+                    y = startY - cellH;
+                    pulseY = y + 2;
+                    bufferY = y + cellH / 2;
+                } else if (activeStep.type === 'prod_digit') {
+                    y = startY + (activeStep.row * 2 + 1) * cellH;
+                    pulseY = y + 2;
+                    bufferY = y + cellH / 2;
+                } else if (activeStep.type === 'prod_carry') {
+                    pulseX = x + cellW * 0.6;
+                    pulseY = startY + (activeStep.row * 2 + 0.6) * cellH;
+                    pulseW = cellW * 0.5;
+                    pulseH = cellH * 0.8;
+                    bufferX = x + cellW * 0.85;
+                    bufferY = startY + (activeStep.row * 2 + 1) * cellH;
+                } else if (activeStep.type === 'borrow_click') {
+                    if (!activeStep.row || activeStep.row === 0) {
+                        pulseY = startY + 2;
+                    } else {
+                        pulseY = startY + ((activeStep.row - 1) * 2 + 2.0) * cellH + 2;
+                    }
+                } else if (activeStep.type === 'borrow_tag') {
+                    if (!activeStep.row || activeStep.row === 0) {
+                        pulseY = startY - cellH * 0.15;
+                        pulseH = cellH * 0.6;
+                        bufferY = startY + cellH * 0.12;
+                    } else {
+                        pulseY = startY + (activeStep.row * 2) * cellH - cellH * 0.12;
+                        pulseH = cellH * 0.6;
+                        bufferY = startY + (activeStep.row * 2) * cellH + cellH * 0.25;
+                    }
+                } else if (activeStep.type === 'sub_digit' || activeStep.type === 'bring_down' || activeStep.type === 'skip_remainder') {
+                    y = startY + (activeStep.row * 2 + 2.0) * cellH;
+                    pulseY = y + 2;
+                    bufferY = y + cellH / 2;
+                }
+
+                const ring = new PIXI.Graphics();
+                ring.lineStyle(3, COLOR_PULSE, 0.9);
+                ring.beginFill(0x10B981, 0.12);
+                ring.drawRoundedRect(pulseX, pulseY, pulseW, pulseH, 8);
+                ring.endFill();
+                targetPulseGraphics.addChild(ring);
+
+                if (currentInputBuffer !== "") {
+                    const bufTxt = new PIXI.Text(currentInputBuffer + "_", {
+                        fontFamily: 'Zen Maru Gothic',
+                        fontSize: fontSizeTag * 1.1,
+                        fontWeight: '900',
+                        fill: COLOR_ACCENT_RED
+                    });
+                    bufTxt.anchor.set(0.5);
+                    bufTxt.position.set(bufferX, bufferY);
+                    targetPulseGraphics.addChild(bufTxt);
+                }
+            }
+        }
+
+        // Initialize App on Window Load
+        window.onload = function () {
+            const container = document.getElementById('canvas-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            app = new PIXI.Application({
+                width: width,
+                height: height,
+                backgroundColor: COLOR_BG_CANVAS,
+                resolution: window.devicePixelRatio || 1,
+                autoDensity: true,
+                antialias: true
+            });
+
+            container.appendChild(app.view);
+
+            gridContainer = new PIXI.Container();
+            targetPulseGraphics = new PIXI.Container();
+            
+            app.stage.addChild(gridContainer);
+            app.stage.addChild(targetPulseGraphics);
+
+            window.addEventListener('resize', handleResize);
+
+            // Start problem generator after canvas setup
+            generateNewProblem();
+        };
+    </script>
+</body>
+</html>
